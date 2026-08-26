@@ -1,0 +1,13 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v4.3.6
+_src_path: https://github.com/jupyterlab/extension-template
+author_email: gabriel.pelouze@lifewatch.eu
+author_name: LifeWatch ERIC VLIC & QCDIS team at University of Amsterdam
+has_binder: false
+has_settings: true
+kind: frontend
+labextension_name: '@naavre/workflow-jupyterlab'
+project_short_description: NaaVRE workflow editor frontend on Jupyter Lab
+python_name: NaaVRE_workflow_jupyterlab
+repository: https://github.com/NaaVRE/NaaVRE-workflow-jupyterlab
+test: true

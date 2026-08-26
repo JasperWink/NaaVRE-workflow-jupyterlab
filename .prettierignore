@@ -1,0 +1,8 @@
+node_modules
+**/node_modules
+**/lib
+**/package.json
+!/package.json
+**/venv
+NaaVRE_workflow_jupyterlab
+public/mockServiceWorker.js

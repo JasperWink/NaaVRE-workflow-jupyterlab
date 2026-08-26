@@ -1,0 +1,32 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    labels:
+      - "maintenance"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    labels:
+      - "maintenance"
+    schedule:
+      interval: "monthly"
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    labels:
+      - "maintenance"
+    schedule:
+      interval: "monthly"
+    groups:
+      emotion:
+        patterns:
+          - '@emotion/**'
+      jupyterlab:
+        patterns:
+          - '@jupyterlab/*'
+      mui:
+        patterns:
+          - '@mui/*'

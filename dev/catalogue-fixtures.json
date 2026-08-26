@@ -1,0 +1,733 @@
+[
+  {
+    "model": "auth.user",
+    "pk": 2,
+    "fields": {
+      "password": "",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "fixture-user-1",
+      "first_name": "",
+      "last_name": "",
+      "email": "",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2024-10-16T13:05:25.378Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "auth.user",
+    "pk": 3,
+    "fields": {
+      "password": "",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "test-user-2",
+      "first_name": "",
+      "last_name": "",
+      "email": "",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2024-10-16T13:05:25.378Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "oidc_jwt_auth.oidcuser",
+    "pk": "ffffffff-ffff-ffff-ffff-ffffffffffff",
+    "fields": {
+      "user": 3
+    }
+  },
+  {
+    "model": "oidc_jwt_auth.oidcuser",
+    "pk": "00000000-0000-0000-0000-000000000000",
+    "fields": {
+      "user": 3
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "test-community-1",
+    "fields": {
+      "title": "Test Community 1",
+      "label": "community",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"]
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "test-community-2",
+    "fields": {
+      "title": "Test Community 2",
+      "label": "community",
+      "show_in_virtual_labs": ["test-virtual-lab-2"],
+      "check_in_virtual_labs": ["test-virtual-lab-2"]
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "test-virtual-lab-1",
+    "fields": {
+      "title": "Test Virtual Lab 1",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": ["test-virtual-lab-1"]
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "test-virtual-lab-2",
+    "fields": {
+      "title": "Test Virtual Lab 2 with a title just long enough to make you wonder whether it is reasonable",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": ["test-virtual-lab-2"]
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-1",
+    "fields": {
+      "title": "Extra Virtual Lab 1",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-2",
+    "fields": {
+      "title": "Extra Virtual Lab 2",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-3",
+    "fields": {
+      "title": "Extra Virtual Lab 3",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-4",
+    "fields": {
+      "title": "Extra Virtual Lab 4",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-5",
+    "fields": {
+      "title": "Extra Virtual Lab 5",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-6",
+    "fields": {
+      "title": "Extra Virtual Lab 6",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-7",
+    "fields": {
+      "title": "Extra Virtual Lab 7",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-8",
+    "fields": {
+      "title": "Extra Virtual Lab 8",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-9",
+    "fields": {
+      "title": "Extra Virtual Lab 9",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-10",
+    "fields": {
+      "title": "Extra Virtual Lab 10",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-11",
+    "fields": {
+      "title": "Extra Virtual Lab 11",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-12",
+    "fields": {
+      "title": "Extra Virtual Lab 12",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-13",
+    "fields": {
+      "title": "Extra Virtual Lab 13",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-14",
+    "fields": {
+      "title": "Extra Virtual Lab 14",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-15",
+    "fields": {
+      "title": "Extra Virtual Lab 15",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-16",
+    "fields": {
+      "title": "Extra Virtual Lab 16",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-17",
+    "fields": {
+      "title": "Extra Virtual Lab 17",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-18",
+    "fields": {
+      "title": "Extra Virtual Lab 18",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-19",
+    "fields": {
+      "title": "Extra Virtual Lab 19",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "base_assets.sharingscope",
+    "pk": "extra-virtual-lab-20",
+    "fields": {
+      "title": "Extra Virtual Lab 20",
+      "label": "virtual_lab",
+      "show_in_virtual_labs": ["test-virtual-lab-1", "test-virtual-lab-2"],
+      "check_in_virtual_labs": []
+    }
+  },
+  {
+    "model": "virtual_labs.virtuallab",
+    "pk": "test-virtual-lab-1",
+    "fields": {
+      "title": "test-virtual-lab-1",
+      "description": "",
+      "created": "2024-10-16T13:05:39.474Z",
+      "modified": "2024-10-16T13:05:39.474Z",
+      "deployment_url": "",
+      "container_image": ""
+    }
+  },
+  {
+    "model": "virtual_labs.virtuallab",
+    "pk": "test-virtual-lab-2",
+    "fields": {
+      "title": "test-virtual-lab-2",
+      "description": "",
+      "created": "2024-10-16T13:05:39.474Z",
+      "modified": "2024-10-16T13:05:39.474Z",
+      "deployment_url": "",
+      "container_image": ""
+    }
+  },
+  {
+    "model": "base_assets.baseasset",
+    "pk": "d1d41322-1101-489c-82a1-8038ea999416",
+    "fields": {
+      "title": "test-cell-1-test-user-2",
+      "description": "",
+      "created": "2025-01-19T21:37:23.503Z",
+      "modified": "2025-01-19T21:37:23.503Z",
+      "owner": 3,
+      "virtual_lab": "test-virtual-lab-1"
+    }
+  },
+  {
+    "model": "base_assets.baseasset",
+    "pk": "b58c627a-1843-421c-a897-89461ddc581a",
+    "fields": {
+      "title": "test-cell-1-test-user-2",
+      "description": "",
+      "created": "2025-01-19T21:38:23.503Z",
+      "modified": "2025-01-19T21:37:23.503Z",
+      "owner": 3,
+      "virtual_lab": "test-virtual-lab-1"
+    }
+  },
+  {
+    "model": "base_assets.baseasset",
+    "pk": "5b8bdf8a-7759-4064-b23d-c6593224cbe1",
+    "fields": {
+      "title": "draft-cell-1-test-user-2",
+      "description": "",
+      "created": "2025-01-19T21:37:23.503Z",
+      "modified": "2025-01-19T21:37:23.503Z",
+      "owner": 3,
+      "virtual_lab": "test-virtual-lab-1"
+    }
+  },
+  {
+    "model": "base_assets.baseasset",
+    "pk": "b6923c9e-eeb6-49fe-81f2-3df7003f8332",
+    "fields": {
+      "title": "test-cell-2-with-a-looooooooooooooong-name-test-user-2",
+      "description": "",
+      "created": "2025-01-19T21:39:53.924Z",
+      "modified": "2025-01-19T21:39:53.924Z",
+      "owner": 3,
+      "virtual_lab": "test-virtual-lab-1"
+    }
+  },
+  {
+    "model": "base_assets.baseasset",
+    "pk": "3995b067-95fd-4706-9325-2b89339afb2c",
+    "fields": {
+      "title": "other-vl-cell-1-test-user-2",
+      "description": "",
+      "created": "2025-01-19T21:40:23.503Z",
+      "modified": "2025-01-19T21:40:23.503Z",
+      "owner": 3,
+      "virtual_lab": "test-virtual-lab-2"
+    }
+  },
+  {
+    "model": "base_assets.baseasset",
+    "pk": "a9ad6181-e78c-45b0-83c1-69385b9f9404",
+    "fields": {
+      "title": "shared-with-user",
+      "description": "",
+      "created": "2025-09-19T18:48:23.397Z",
+      "modified": "2025-09-19T18:48:23.397Z",
+      "owner": 2,
+      "virtual_lab": "test-virtual-lab-1",
+      "shared_with_users": [3],
+      "shared_with_scopes": []
+    }
+  },
+  {
+    "model": "base_assets.baseasset",
+    "pk": "d7fa87ca-79a3-43eb-993a-83afec93f1e4",
+    "fields": {
+      "title": "shared-with-vl-1",
+      "description": "",
+      "created": "2025-09-19T18:48:23.397Z",
+      "modified": "2025-09-19T18:48:23.397Z",
+      "owner": 2,
+      "virtual_lab": "test-virtual-lab-1",
+      "shared_with_users": [],
+      "shared_with_scopes": ["test-virtual-lab-1"]
+    }
+  },
+  {
+    "model": "base_assets.baseasset",
+    "pk": "77e49ffb-7688-40c5-8287-6693ae3d096a",
+    "fields": {
+      "title": "shared-with-vl-2",
+      "description": "",
+      "created": "2025-09-19T18:48:23.397Z",
+      "modified": "2025-09-19T18:48:23.397Z",
+      "owner": 2,
+      "virtual_lab": "test-virtual-lab-2",
+      "shared_with_users": [],
+      "shared_with_scopes": ["test-virtual-lab-2"]
+    }
+  },
+  {
+    "model": "base_assets.baseasset",
+    "pk": "cbd0bc89-7418-4536-a8c4-6eb3bb6bf2e6",
+    "fields": {
+      "title": "shared-with-community",
+      "description": "",
+      "created": "2025-09-19T18:48:23.397Z",
+      "modified": "2025-09-19T18:48:23.397Z",
+      "owner": 2,
+      "virtual_lab": "test-virtual-lab-1",
+      "shared_with_users": [],
+      "shared_with_scopes": ["test-community-1"]
+    }
+  },
+  {
+    "model": "workflow_cells.baseimage",
+    "pk": 2,
+    "fields": {
+      "build": "example.com/test-build-image:v0.0.1",
+      "runtime": "example.com/test-runtime-image:v0.0.1"
+    }
+  },
+  {
+    "model": "workflow_cells.dependency",
+    "pk": 5,
+    "fields": {
+      "name": "test-dependency-1",
+      "module": null,
+      "asname": null
+    }
+  },
+  {
+    "model": "workflow_cells.dependency",
+    "pk": 6,
+    "fields": {
+      "name": "test-dependency-2",
+      "module": null,
+      "asname": null
+    }
+  },
+  {
+    "model": "workflow_cells.basevariable",
+    "pk": 5,
+    "fields": {
+      "name": "test_value_1",
+      "type": "list"
+    }
+  },
+  {
+    "model": "workflow_cells.basevariable",
+    "pk": 6,
+    "fields": {
+      "name": "param_test_1",
+      "type": "str"
+    }
+  },
+  {
+    "model": "workflow_cells.basevariable",
+    "pk": 7,
+    "fields": {
+      "name": "secret_test_1",
+      "type": "str"
+    }
+  },
+  {
+    "model": "workflow_cells.basevariable",
+    "pk": 8,
+    "fields": {
+      "name": "test_value_1",
+      "type": "list"
+    }
+  },
+  {
+    "model": "workflow_cells.input",
+    "pk": 5,
+    "fields": {}
+  },
+  {
+    "model": "workflow_cells.output",
+    "pk": 8,
+    "fields": {}
+  },
+  {
+    "model": "workflow_cells.conf",
+    "pk": 2,
+    "fields": {
+      "name": "conf_test_1",
+      "assignation": "conf_test_1 = 1"
+    }
+  },
+  {
+    "model": "workflow_cells.param",
+    "pk": 6,
+    "fields": {
+      "default_value": "test value"
+    }
+  },
+  {
+    "model": "workflow_cells.secret",
+    "pk": 7,
+    "fields": {}
+  },
+  {
+    "model": "workflow_cells.cell",
+    "pk": "d1d41322-1101-489c-82a1-8038ea999416",
+    "fields": {
+      "version": 1,
+      "container_image": "example.com/naavre-cells/test-cell-1:49c621b",
+      "base_container_image": 2,
+      "kernel": "ipython",
+      "source_url": "",
+      "dependencies": [5, 6],
+      "inputs": [],
+      "outputs": [8],
+      "confs": [2],
+      "params": [6],
+      "secrets": [7]
+    }
+  },
+  {
+    "model": "workflow_cells.cell",
+    "pk": "b58c627a-1843-421c-a897-89461ddc581a",
+    "fields": {
+      "version": 2,
+      "container_image": "example.com/naavre-cells/test-cell-1:7abc41dd",
+      "base_container_image": 2,
+      "kernel": "ipython",
+      "source_url": "",
+      "dependencies": [5, 6],
+      "inputs": [],
+      "outputs": [8],
+      "confs": [2],
+      "params": [6],
+      "secrets": [7]
+    }
+  },
+  {
+    "model": "workflow_cells.cell",
+    "pk": "5b8bdf8a-7759-4064-b23d-c6593224cbe1",
+    "fields": {
+      "version": 1,
+      "container_image": null,
+      "base_container_image": null,
+      "kernel": "ipython",
+      "source_url": "",
+      "dependencies": [],
+      "inputs": [],
+      "outputs": [],
+      "confs": [],
+      "params": [],
+      "secrets": [],
+      "is_draft": true
+    }
+  },
+  {
+    "model": "workflow_cells.cell",
+    "pk": "b6923c9e-eeb6-49fe-81f2-3df7003f8332",
+    "fields": {
+      "version": 1,
+      "container_image": "example.com/naavre-cells/test-cell-2:f7b1772",
+      "base_container_image": 2,
+      "kernel": "",
+      "source_url": "",
+      "dependencies": [],
+      "inputs": [5],
+      "outputs": [],
+      "confs": [],
+      "params": [],
+      "secrets": []
+    }
+  },
+  {
+    "model": "workflow_cells.cell",
+    "pk": "3995b067-95fd-4706-9325-2b89339afb2c",
+    "fields": {
+      "version": 1,
+      "container_image": "example.com/naavre-cells/other-vl-cell-1:b078cae4",
+      "base_container_image": 2,
+      "kernel": "ipython",
+      "source_url": "",
+      "dependencies": [5, 6],
+      "inputs": [],
+      "outputs": [8],
+      "confs": [2],
+      "params": [6],
+      "secrets": [7]
+    }
+  },
+  {
+    "model": "workflow_cells.cell",
+    "pk": "a9ad6181-e78c-45b0-83c1-69385b9f9404",
+    "fields": {
+      "version": 1,
+      "container_image": "example.com/naavre-cells/shared:93807f0f",
+      "base_container_image": 2,
+      "kernel": "ipython",
+      "source_url": "",
+      "dependencies": [],
+      "inputs": [],
+      "outputs": [],
+      "confs": [],
+      "params": [],
+      "secrets": []
+    }
+  },
+  {
+    "model": "workflow_cells.cell",
+    "pk": "d7fa87ca-79a3-43eb-993a-83afec93f1e4",
+    "fields": {
+      "version": 1,
+      "container_image": "example.com/naavre-cells/shared:93807f0f",
+      "base_container_image": 2,
+      "kernel": "ipython",
+      "source_url": "",
+      "dependencies": [],
+      "inputs": [],
+      "outputs": [],
+      "confs": [],
+      "params": [],
+      "secrets": []
+    }
+  },
+  {
+    "model": "workflow_cells.cell",
+    "pk": "77e49ffb-7688-40c5-8287-6693ae3d096a",
+    "fields": {
+      "version": 1,
+      "container_image": "example.com/naavre-cells/shared:93807f0f",
+      "base_container_image": 2,
+      "kernel": "ipython",
+      "source_url": "",
+      "dependencies": [],
+      "inputs": [],
+      "outputs": [],
+      "confs": [],
+      "params": [],
+      "secrets": []
+    }
+  },
+  {
+    "model": "workflow_cells.cell",
+    "pk": "cbd0bc89-7418-4536-a8c4-6eb3bb6bf2e6",
+    "fields": {
+      "version": 1,
+      "container_image": "example.com/naavre-cells/shared:93807f0f",
+      "base_container_image": 2,
+      "kernel": "ipython",
+      "source_url": "",
+      "dependencies": [],
+      "inputs": [],
+      "outputs": [],
+      "confs": [],
+      "params": [],
+      "secrets": []
+    }
+  },
+  {
+    "model": "workflow_cells.cellversionscollection",
+    "pk": 1,
+    "fields": {
+      "versions": [
+        "d1d41322-1101-489c-82a1-8038ea999416",
+        "b58c627a-1843-421c-a897-89461ddc581a"
+      ]
+    }
+  },
+  {
+    "model": "workflow_cells.cellversionscollection",
+    "pk": 2,
+    "fields": {
+      "versions": ["5b8bdf8a-7759-4064-b23d-c6593224cbe1"]
+    }
+  },
+  {
+    "model": "workflow_cells.cellversionscollection",
+    "pk": 3,
+    "fields": {
+      "versions": ["b6923c9e-eeb6-49fe-81f2-3df7003f8332"]
+    }
+  },
+  {
+    "model": "workflow_cells.cellversionscollection",
+    "pk": 4,
+    "fields": {
+      "versions": ["3995b067-95fd-4706-9325-2b89339afb2c"]
+    }
+  },
+  {
+    "model": "workflow_cells.cellversionscollection",
+    "pk": 5,
+    "fields": {
+      "versions": ["a9ad6181-e78c-45b0-83c1-69385b9f9404"]
+    }
+  },
+  {
+    "model": "workflow_cells.cellversionscollection",
+    "pk": 6,
+    "fields": {
+      "versions": ["d7fa87ca-79a3-43eb-993a-83afec93f1e4"]
+    }
+  },
+  {
+    "model": "workflow_cells.cellversionscollection",
+    "pk": 7,
+    "fields": {
+      "versions": ["77e49ffb-7688-40c5-8287-6693ae3d096a"]
+    }
+  },
+  {
+    "model": "workflow_cells.cellversionscollection",
+    "pk": 8,
+    "fields": {
+      "versions": ["cbd0bc89-7418-4536-a8c4-6eb3bb6bf2e6"]
+    }
+  }
+]

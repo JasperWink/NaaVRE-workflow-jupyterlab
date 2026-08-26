@@ -1,0 +1,10 @@
+diff --git a/src/components/PortsGroup/PortsGroup.default.d.ts b/src/components/PortsGroup/PortsGroup.default.d.ts
+index 4c57133d3edf1fd0970ed01a4777469140a77f5f..a1e7d01944983d0220d69069fffd58ad93ce2f62 100644
+--- a/src/components/PortsGroup/PortsGroup.default.d.ts
++++ b/src/components/PortsGroup/PortsGroup.default.d.ts
+@@ -4,4 +4,4 @@ export interface IPortsGroupDefaultProps {
+     config: IConfig;
+     side: 'top' | 'bottom' | 'left' | 'right';
+ }
+-export declare const PortsGroupDefault: import("styled-components").StyledComponent<"div", any, IPortsGroupDefaultProps, never>;
++export declare const PortsGroupDefault: any
