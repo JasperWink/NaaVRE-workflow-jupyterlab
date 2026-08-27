@@ -62,6 +62,8 @@
     "dependencies": {
         "@emotion/react": "^11.14.0",
         "@emotion/styled": "^11.14.0",
+        "@jupyter/collaborative-drive": "~4.3.0",
+        "@jupyter/docprovider": "~4.3.0",
         "@jupyterlab/application": "^4.0.0",
         "@jupyterlab/docmanager": "^4.0.0",
         "@jupyterlab/launcher": "^4.3.4",
@@ -129,7 +131,15 @@
     "jupyterlab": {
         "extension": true,
         "outputDir": "NaaVRE_workflow_jupyterlab/labextension",
-        "schemaDir": "schema"
+        "schemaDir": "schema",
+        "sharedPackages": {
+            "@jupyter/docprovider": {
+                "singleton": true
+            },
+            "@jupyter/collaborative-drive": {
+                "singleton": true
+            }
+        }
     },
     "eslintIgnore": [
         "node_modules",

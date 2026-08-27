@@ -33,7 +33,13 @@ import { CellsSideBar } from './cells/CellsSideBar';
 import { CellPopup } from './cells/CellPopup';
 import { NodeParamValueDialog } from './chart/NodeParamValue';
 
-export interface IProps {}
+export interface IProps {
+  /**
+   * Called whenever the chart changes locally (drag, link, drop, draft edit,
+   * delete). The host widget pushes these into the shared document model.
+   */
+  onChartChange?: (chart: IChart) => void;
+}
 
 export interface IState {
   chart: IChart | null;
@@ -76,9 +82,10 @@ export class Composer extends React.Component<IProps, IState> {
             );
           }
         }
-        this.setState({
-          chart: { ...this.state.chart, ...newChart }
-        });
+        this.setState(
+          { chart: { ...this.state.chart, ...newChart } },
+          this._notifyChartChange
+        );
       }
   ) as typeof actions;
 
@@ -97,10 +104,21 @@ export class Composer extends React.Component<IProps, IState> {
   };
 
   setChart = (nextChart: IChart | ((prev: IChart | null) => IChart | null)) => {
-    if (typeof nextChart === 'function') {
-      this.setState(prevState => ({ chart: nextChart(prevState.chart) }));
-    } else {
-      this.setState({ chart: nextChart });
+    this.setState(
+      prevState => ({
+        chart:
+          typeof nextChart === 'function'
+            ? nextChart(prevState.chart)
+            : nextChart
+      }),
+      this._notifyChartChange
+    );
+  };
+
+  /** Report the committed chart to the host widget, if it asked to hear. */
+  private _notifyChartChange = () => {
+    if (this.state.chart) {
+      this.props.onChartChange?.(this.state.chart);
     }
   };
 

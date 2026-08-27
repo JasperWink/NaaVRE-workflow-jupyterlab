@@ -1,6 +1,17 @@
 // Derived from https://github.com/jupyterlab/extension-examples/blob/2b9283f611d2471f8ac310704a3c6a896cbc1e07/documents/src/model.ts
 // Copyright 2023 Project Jupyter Contributors; licensed under the BSD 3-Clause License license:
 // https://github.com/jupyterlab/extension-examples/blob/main/LICENSE
+//
+// The chart is stored under granular keys in the `content` map: one JSON
+// object per node under 'node:<id>' and one per link under 'link:<id>'.
+// Writing only the keys that actually changed lets Yjs merge concurrent edits
+// to different nodes, instead of last-write-wins on the whole chart, and keeps
+// each update proportional to the element edited rather than to the size of
+// the document.
+//
+// The document holds document *content* only. View state — canvas pan
+// (`offset`), zoom (`scale`), `selected` and `hovered` — is per-client and is
+// never stored or synced.
 
 import { YDocument, DocumentChange } from '@jupyter/ydoc';
 
@@ -8,11 +19,13 @@ import { IChangedArgs } from '@jupyterlab/coreutils';
 
 import { DocumentRegistry } from '@jupyterlab/docregistry';
 
-import { PartialJSONObject, PartialJSONValue } from '@lumino/coreutils';
+import { PartialJSONValue } from '@lumino/coreutils';
 
 import { ISignal, Signal } from '@lumino/signaling';
 
-import { defaultChart, IChart } from './utils/chart';
+import { ILink } from '@mrblenny/react-flow-chart';
+
+import { defaultChart, IChart, INode } from './utils/chart';
 import { migrateChart } from './utils/chartMigrations';
 
 import * as Y from 'yjs';
@@ -23,6 +36,24 @@ import * as Y from 'yjs';
 export type SharedObject = {
   chart: IChart;
 };
+
+const NODE_KEY_PREFIX = 'node:';
+const LINK_KEY_PREFIX = 'link:';
+// Chart-level content; the other top-level fields are view state and not stored.
+const PROPERTIES_KEY = 'properties';
+const METADATA_KEY = 'metadata';
+
+/** JSON.parse that degrades to a fallback instead of throwing. */
+function parseJson(raw: unknown, fallback: any): any {
+  if (typeof raw !== 'string' || raw === '') {
+    return fallback;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
 
 /**
  * DocumentModel: this Model represents the content of the file
@@ -134,10 +165,10 @@ export class WorkflowModel implements DocumentRegistry.IModel {
    * Shared object content
    */
   get chart(): IChart {
-    return this.sharedModel.get('chart');
+    return this.sharedModel.getChart();
   }
   set chart(v: IChart) {
-    this.sharedModel.set('chart', v);
+    this.sharedModel.setChart(v);
   }
 
   /**
@@ -311,7 +342,7 @@ export class WorkflowModel implements DocumentRegistry.IModel {
  * for the widget.
  */
 export type WorkflowChange = {
-  chartChange?: IChart;
+  chartChange?: boolean;
 } & DocumentChange;
 
 /**
@@ -333,10 +364,7 @@ export class Workflow extends YDocument<WorkflowChange> {
    * @returns The source
    */
   getSource(): string {
-    const obj = {
-      chart: this.get('chart') ?? defaultChart
-    };
-    return JSON.stringify(obj, null, 2);
+    return JSON.stringify({ chart: this.getChart() }, null, 2);
   }
 
   /**
@@ -347,12 +375,13 @@ export class Workflow extends YDocument<WorkflowChange> {
   setSource(value: string): void {
     let chart: IChart = defaultChart;
     if (value) {
-      const obj = JSON.parse(value);
-      chart = migrateChart(obj.chart);
+      const obj = parseJson(value, null);
+      const raw = obj && typeof obj === 'object' ? obj.chart : null;
+      if (raw && typeof raw === 'object') {
+        chart = migrateChart(raw);
+      }
     }
-    this.transact(() => {
-      this.set('chart', chart);
-    });
+    this.setChart(chart);
   }
 
   /**
@@ -376,34 +405,77 @@ export class Workflow extends YDocument<WorkflowChange> {
   }
 
   /**
-   * Returns the requested object.
-   *
-   * @param key The key of the object.
-   * @returns The content
+   * Reassemble the chart from the granular content keys. Corrupt values are
+   * skipped rather than throwing, so a damaged document still opens. View
+   * state (pan, zoom, selection, hover) is per-client and is not stored, so it
+   * always comes back at its default.
    */
-  get(key: 'chart'): IChart;
-  get(key: string): any {
-    const data = this._content.get(key);
-    switch (key) {
-      case 'chart':
-        return data ? JSON.parse(data) : defaultChart;
-      default:
-        return data ?? '';
+  getChart(): IChart {
+    const nodes: IChart['nodes'] = {};
+    const links: IChart['links'] = {};
+    this._content.forEach((value, key) => {
+      if (key.startsWith(NODE_KEY_PREFIX)) {
+        const node = parseJson(value, null) as INode | null;
+        if (node) {
+          nodes[key.slice(NODE_KEY_PREFIX.length)] = node;
+        }
+      } else if (key.startsWith(LINK_KEY_PREFIX)) {
+        const link = parseJson(value, null) as ILink | null;
+        if (link) {
+          links[key.slice(LINK_KEY_PREFIX.length)] = link;
+        }
+      }
+    });
+    const chart: IChart = {
+      ...defaultChart,
+      nodes,
+      links,
+      properties: parseJson(
+        this._content.get(PROPERTIES_KEY),
+        defaultChart.properties
+      )
+    };
+    const metadata = parseJson(this._content.get(METADATA_KEY), null);
+    if (metadata) {
+      (chart as Record<string, any>).metadata = metadata;
     }
+    return chart;
   }
 
   /**
-   * Adds new data.
-   *
-   * @param key The key of the object.
-   * @param value New object.
+   * Write the chart, touching only the keys whose value actually changed and
+   * deleting the keys of removed nodes and links. Concurrent edits to
+   * different elements then live on different Yjs keys and merge instead of
+   * overwriting each other; a no-op write emits nothing.
    */
-  set(key: 'chart', value: IChart): void;
-  set(key: string, value: IChart | PartialJSONObject): void {
-    this._content.set(
-      key,
-      ['chart'].includes(key) ? JSON.stringify(value) : value
+  setChart(chart: IChart): void {
+    const desired = new Map<string, string>();
+    Object.entries(chart.nodes ?? {}).forEach(([id, node]) => {
+      desired.set(NODE_KEY_PREFIX + id, JSON.stringify(node));
+    });
+    Object.entries(chart.links ?? {}).forEach(([id, link]) => {
+      desired.set(LINK_KEY_PREFIX + id, JSON.stringify(link));
+    });
+    desired.set(
+      PROPERTIES_KEY,
+      JSON.stringify(chart.properties ?? defaultChart.properties)
     );
+    const metadata = (chart as Record<string, any>).metadata;
+    if (metadata) {
+      desired.set(METADATA_KEY, JSON.stringify(metadata));
+    }
+    this.transact(() => {
+      Array.from(this._content.keys()).forEach(key => {
+        if (!desired.has(key)) {
+          this._content.delete(key);
+        }
+      });
+      desired.forEach((json, key) => {
+        if (this._content.get(key) !== json) {
+          this._content.set(key, json);
+        }
+      });
+    });
   }
 
   /**
@@ -412,14 +484,10 @@ export class Workflow extends YDocument<WorkflowChange> {
    * @param event Model event
    */
   private _contentObserver = (event: Y.YMapEvent<any>): void => {
-    const changes: WorkflowChange = {};
-
-    // Checks which object changed and propagates them.
-    if (event.keysChanged.has('chart')) {
-      changes.chartChange = this._content.get('chart');
+    if (event.keysChanged.size === 0) {
+      return;
     }
-
-    this._changed.emit(changes);
+    this._changed.emit({ chartChange: true });
   };
 
   private _content: Y.Map<any>;

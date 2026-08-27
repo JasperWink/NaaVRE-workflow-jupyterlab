@@ -12,6 +12,7 @@ import {
 } from '@jupyterlab/apputils';
 import { ILauncher } from '@jupyterlab/launcher';
 import { IDocumentManager } from '@jupyterlab/docmanager';
+import { ICollaborativeContentProvider } from '@jupyter/collaborative-drive';
 import { Token } from '@lumino/coreutils';
 import { Widget } from '@lumino/widgets';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
@@ -21,6 +22,7 @@ import { IFileBrowserFactory } from '@jupyterlab/filebrowser';
 
 import { WorkflowModelFactory, WorkflowWidgetFactory } from './factory';
 import { WorkflowWidget } from './widget';
+import { Workflow } from './model';
 import { ISettings } from './settings';
 import { ToolbarItems } from './toolbarItems';
 import { Commands, CommandIDs } from './commands';
@@ -50,7 +52,7 @@ const extension: JupyterFrontEndPlugin<void> = {
     ISettingRegistry,
     IFileBrowserFactory
   ],
-  optional: [IDocumentManager],
+  optional: [IDocumentManager, ICollaborativeContentProvider],
   provides: IWorkflowTracker,
   activate: (
     app: JupyterFrontEnd,
@@ -60,7 +62,8 @@ const extension: JupyterFrontEndPlugin<void> = {
     toolbarRegistry: IToolbarWidgetRegistry | null,
     settingRegistry: ISettingRegistry | null,
     browserFactory: IFileBrowserFactory,
-    docManager: IDocumentManager | null
+    docManager: IDocumentManager | null,
+    contentProvider: ICollaborativeContentProvider | null
   ) => {
     console.log(
       'JupyterLab extension @naavre/workflow-jupyterlab is activated!'
@@ -170,6 +173,22 @@ const extension: JupyterFrontEndPlugin<void> = {
       defaultFor: ['naavrewf'],
       toolbarFactory: toolbarFactory
     });
+
+    // Enable real-time collaboration for .naavrewf when the jupyter-collaboration
+    // content provider is available. The key ('naavrewfdoc') is the document's
+    // content type and must match the model factory (src/factory.ts) and the
+    // server-side YDoc entry point (pyproject.toml). Without the contentProviderId
+    // the document opens as an independent, single-user copy and never syncs.
+    if (contentProvider) {
+      contentProvider.sharedModelFactory.registerDocumentFactory(
+        'naavrewfdoc' as any,
+        () => Workflow.create()
+      );
+      widgetFactory.contentProviderId = 'rtc';
+      console.log(
+        '@naavre/workflow-jupyterlab: real-time collaboration enabled for .naavrewf'
+      );
+    }
 
     // Add the widget to the tracker when it's created
     widgetFactory.widgetCreated.connect((sender, widget) => {
