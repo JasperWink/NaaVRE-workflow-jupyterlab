@@ -13,6 +13,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     selectedCellInList: null,
-    setSelectedCell: (c, n) => {}
+    setSelectedCell: (c, n) => {},
+    onCreateDraftCell: cell => console.log('create draft', cell)
   }
 };

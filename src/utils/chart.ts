@@ -151,3 +151,72 @@ export function setChartParam(chart: IChart, chartParam: IChartParam): IChart {
     }
   };
 }
+
+// Add a cell as a new node to the chart. Used when a node is created
+// programmatically (e.g. a draft node from a dialog) rather than dropped from
+// the sidebar. The node is positioned near the top-left of the currently
+// visible canvas, with a small per-node offset so successive nodes don't fully
+// overlap, and is selected so the element editor opens for it.
+export function addCellNodeToChart(
+  chart: IChart,
+  cell: ICell | ISpecialCell
+): IChart {
+  const node = cellToChartNode(cell);
+  const n = Object.keys(chart.nodes).length;
+  node.position = {
+    x: -chart.offset.x + 80 + (n % 6) * 30,
+    y: -chart.offset.y + 80 + (n % 6) * 30
+  };
+  return {
+    ...chart,
+    nodes: {
+      ...chart.nodes,
+      [node.id]: node
+    },
+    selected: { type: 'node', id: node.id }
+  };
+}
+
+// Replace the cell backing an existing node (e.g. after editing a draft node's
+// inputs/outputs). Ports are recomputed from the new cell while the node keeps
+// its id and position. Any link referencing a port that no longer exists on
+// this node is dropped.
+export function updateChartNodeCell(
+  chart: IChart,
+  nodeId: string,
+  cell: ICell | ISpecialCell
+): IChart {
+  const existing = chart.nodes[nodeId];
+  if (!existing) {
+    return chart;
+  }
+  const newNode = cellToChartNode(cell);
+  newNode.id = nodeId;
+  newNode.position = existing.position;
+
+  const validPorts = new Set(Object.keys(newNode.ports));
+  const links = Object.fromEntries(
+    Object.entries(chart.links).filter(([, link]) => {
+      if (link.from.nodeId === nodeId && !validPorts.has(link.from.portId)) {
+        return false;
+      }
+      if (
+        link.to.nodeId === nodeId &&
+        link.to.portId !== undefined &&
+        !validPorts.has(link.to.portId)
+      ) {
+        return false;
+      }
+      return true;
+    })
+  );
+
+  return {
+    ...chart,
+    nodes: {
+      ...chart.nodes,
+      [nodeId]: newNode
+    },
+    links
+  };
+}

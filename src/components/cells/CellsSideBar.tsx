@@ -1,12 +1,18 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import Tooltip from '@mui/material/Tooltip';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import AddIcon from '@mui/icons-material/Add';
 
 import { ICell } from '../../naavre-common/types/NaaVRECatalogue/WorkflowCells';
-import { specialCells } from '../../utils/specialCells';
+import {
+  ISpecialCell,
+  makeDraftCell,
+  specialCells
+} from '../../utils/specialCells';
 import { CellsList } from './CellsList';
+import { DraftCellDialog } from './DraftCellDialog';
 import { PageNav } from './PageNav';
 import { ListFilter } from './ListFilter';
 import { SettingsContext } from '../../settings';
@@ -18,12 +24,15 @@ import { UserInfoContext } from './UserInfoContext';
 
 export function CellsSideBar({
   selectedCellInList,
-  setSelectedCell
+  setSelectedCell,
+  onCreateDraftCell
 }: {
   selectedCellInList: ICell | null;
   setSelectedCell: (c: ICell | null, n: HTMLDivElement | null) => void;
+  onCreateDraftCell: (cell: ISpecialCell) => void;
 }) {
   const settings = useContext(SettingsContext);
+  const [draftDialogOpen, setDraftDialogOpen] = useState(false);
   const {
     setUrl: setCellsListUrl,
     loading,
@@ -102,6 +111,42 @@ export function CellsSideBar({
             selectedCellInList={selectedCellInList}
             setSelectedCell={setSelectedCell}
             fetchCellsListResponse={fetchCellsListResponse}
+          />
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              minHeight: '40px',
+              paddingRight: '10px',
+              paddingLeft: '10px',
+              background: '#3c8f49',
+              color: 'white',
+              fontSize: 'medium'
+            }}
+          >
+            <span>Draft Components</span>
+            <Tooltip title="New draft node" arrow>
+              <IconButton
+                aria-label="New draft node"
+                style={{ color: 'white', borderRadius: '100%' }}
+                onClick={() => setDraftDialogOpen(true)}
+              >
+                <AddIcon />
+              </IconButton>
+            </Tooltip>
+          </div>
+          <p style={{ margin: '10px', fontSize: 'small', color: 'gray' }}>
+            Create a placeholder node with custom inputs and outputs before the
+            containerized cell exists.
+          </p>
+          <DraftCellDialog
+            open={draftDialogOpen}
+            onClose={() => setDraftDialogOpen(false)}
+            onSave={init => {
+              onCreateDraftCell(makeDraftCell(init));
+              setDraftDialogOpen(false);
+            }}
           />
         </UserInfoContext.Provider>
       </SharingScopesContext.Provider>
