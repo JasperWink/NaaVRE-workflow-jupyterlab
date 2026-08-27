@@ -8,6 +8,7 @@ import { ICell } from '../../naavre-common/types/NaaVRECatalogue/WorkflowCells';
 import Stack from '@mui/material/Stack';
 import { Typography } from '@mui/material';
 import { TooltipOverflowLabel } from '../common/TooltipOverflowLabel';
+import { DRAFT_CELL_TYPE } from '../../utils/specialCells';
 import { INode } from '../../utils/chart';
 
 const NodeContainer = styled.div<{
@@ -104,7 +105,11 @@ function NodeCustomElement(
   { node, children, ...otherProps }: INodeDefaultProps & { node: INode },
   ref: ForwardedRef<HTMLDivElement>
 ) {
-  const isSpecialNode = node.type !== 'workflow-cell';
+  // Draft nodes are not catalogue cells, but they carry user-defined
+  // inputs/outputs and should render like (draft) workflow-cells rather than the
+  // fixed-size Splitter/Merger "special" nodes.
+  const isDraftCell = node.type === DRAFT_CELL_TYPE;
+  const isSpecialNode = node.type !== 'workflow-cell' && !isDraftCell;
 
   getNodeHeight(node);
   const width = isSpecialNode ? '200px' : '250px';

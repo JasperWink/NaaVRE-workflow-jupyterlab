@@ -54,7 +54,8 @@ function PortLabel({ children }: { children: ReactNode }) {
 
 export const PortCustom = (props: IPortDefaultProps) => {
   const isSpecialNode =
-    props.port.properties.parentNodeType !== 'workflow-cell';
+    props.port.properties.parentNodeType !== 'workflow-cell' &&
+    props.port.properties.parentNodeType !== 'draft-cell';
 
   const positionStyle = props.port.type === 'left' ? { left: 0 } : { right: 0 };
 

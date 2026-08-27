@@ -14,7 +14,13 @@ import {
 
 import { ICell } from '../naavre-common/types/NaaVRECatalogue/WorkflowCells';
 import { NaaVREExternalService } from '../naavre-common/handler';
-import { IChart, IChartParam, validateLink } from '../utils/chart';
+import {
+  addCellNodeToChart,
+  IChart,
+  IChartParam,
+  validateLink
+} from '../utils/chart';
+import { ISpecialCell } from '../utils/specialCells';
 import { theme } from '../Theme';
 import { SettingsContext } from '../settings';
 import { NodeCustom } from './chart/NodeCustom';
@@ -96,6 +102,12 @@ export class Composer extends React.Component<IProps, IState> {
     } else {
       this.setState({ chart: nextChart });
     }
+  };
+
+  // Add a cell to the chart as a new node. Used by the sidebar's draft-node
+  // dialog, which creates a cell rather than dragging an existing one in.
+  addCellNode = (cell: ICell | ISpecialCell) => {
+    this.setChart(prev => (prev ? addCellNodeToChart(prev, cell) : prev));
   };
 
   setSelectedChartParam = (selectedChartParam: IChartParam | null) => {
@@ -217,6 +229,7 @@ export class Composer extends React.Component<IProps, IState> {
               <CellsSideBar
                 selectedCellInList={this.state.selectedCellInList}
                 setSelectedCell={this.setSelectedCell}
+                onCreateDraftCell={this.addCellNode}
               />
             </div>
           </div>

@@ -11,6 +11,7 @@ import {
   WidgetTracker
 } from '@jupyterlab/apputils';
 import { ILauncher } from '@jupyterlab/launcher';
+import { IDocumentManager } from '@jupyterlab/docmanager';
 import { Token } from '@lumino/coreutils';
 import { Widget } from '@lumino/widgets';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
@@ -23,6 +24,7 @@ import { WorkflowWidget } from './widget';
 import { ISettings } from './settings';
 import { ToolbarItems } from './toolbarItems';
 import { Commands, CommandIDs } from './commands';
+import { setDocumentManager } from './naavre-common/notebook';
 
 /**
  * The name of the factory that creates editor widgets.
@@ -48,7 +50,7 @@ const extension: JupyterFrontEndPlugin<void> = {
     ISettingRegistry,
     IFileBrowserFactory
   ],
-  optional: [],
+  optional: [IDocumentManager],
   provides: IWorkflowTracker,
   activate: (
     app: JupyterFrontEnd,
@@ -57,12 +59,17 @@ const extension: JupyterFrontEndPlugin<void> = {
     translator: ITranslator,
     toolbarRegistry: IToolbarWidgetRegistry | null,
     settingRegistry: ISettingRegistry | null,
-    browserFactory: IFileBrowserFactory
+    browserFactory: IFileBrowserFactory,
+    docManager: IDocumentManager | null
   ) => {
     console.log(
       'JupyterLab extension @naavre/workflow-jupyterlab is activated!'
     );
     Commands.addCommands(app.commands, browserFactory, FACTORY);
+
+    // Make the document manager available to the composer so draft nodes can
+    // insert cells into a notebook's live shared model (see AddToNotebookDialog).
+    setDocumentManager(docManager);
 
     if (launcher) {
       launcher.add({
