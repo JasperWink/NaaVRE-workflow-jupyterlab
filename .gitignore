@@ -139,3 +139,17 @@ notebook-dir/
 
 *storybook.log
 storybook-static
+
+# Local dev environment (created by run.sh, never committed)
+venv/
+.venv/
+.jupyter_ystore.db
+junit.xml
+coverage/
+
+# Local-only dev config: machine-specific, and the service configs carry
+# tokens. Kept out of git rather than merely untracked, so they cannot be
+# committed by accident.
+dev/*.local.yaml
+dev/*.local.json
+dev/containerizer-config.json
