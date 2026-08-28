@@ -16,6 +16,8 @@ import Typography from '@mui/material/Typography';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
+// Every type the catalogue service accepts — see the note on VariableType.
+// Not a shortlist: adding to it needs a matching change in the service.
 const VARIABLE_TYPES: VariableType[] = ['str', 'int', 'float', 'list'];
 
 import {

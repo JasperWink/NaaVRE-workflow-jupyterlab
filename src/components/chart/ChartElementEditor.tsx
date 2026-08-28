@@ -17,6 +17,7 @@ import {
   describeIODiff,
   findContainerizedCell
 } from '../../utils/draftPromotion';
+import { addTaskToBoard, taskBoardAvailable } from '../../boardAccess';
 import { SettingsContext } from '../../settings';
 import { CellInfo } from '../common/CellInfo';
 import { CellInfoHeader } from '../common/CellInfoHeader';
@@ -42,6 +43,7 @@ function NodeEditor({
   const [editOpen, setEditOpen] = React.useState(false);
   const [addToNotebookOpen, setAddToNotebookOpen] = React.useState(false);
   const [replacing, setReplacing] = React.useState(false);
+  const [addingToBoard, setAddingToBoard] = React.useState(false);
   const [snackbar, setSnackbar] = React.useState<{
     open: boolean;
     severity: 'success' | 'error';
@@ -49,6 +51,33 @@ function NodeEditor({
   }>({ open: false, severity: 'success', message: '' });
   const cell = node.properties.cell as ICell;
   const isDraft = node.type === DRAFT_CELL_TYPE;
+
+  // Put the draft on the task board as a plain card, so the work it stands for
+  // can be planned there. The card is a copy of the node's title and
+  // description: the two are not linked afterwards, so editing (or replacing,
+  // or deleting) the node leaves the card alone.
+  const addDraftToTaskBoard = async () => {
+    setAddingToBoard(true);
+    try {
+      await addTaskToBoard({
+        title: cell.title,
+        description: cell.description ?? ''
+      });
+      setSnackbar({
+        open: true,
+        severity: 'success',
+        message: `"${cell.title}" added to the task board.`
+      });
+    } catch (e: unknown) {
+      setSnackbar({
+        open: true,
+        severity: 'error',
+        message: `Could not add the card to the task board: ${e instanceof Error ? e.message : String(e)}`
+      });
+    } finally {
+      setAddingToBoard(false);
+    }
+  };
 
   // Swap the draft for its containerized catalogue cell, matched by title.
   // The replace is only applied when the inputs/outputs agree, so the node
@@ -115,6 +144,15 @@ function NodeEditor({
           <Button variant="outlined" onClick={() => setAddToNotebookOpen(true)}>
             Add to notebook
           </Button>
+          {taskBoardAvailable() && (
+            <Button
+              variant="outlined"
+              disabled={addingToBoard}
+              onClick={() => void addDraftToTaskBoard()}
+            >
+              {addingToBoard ? 'Adding…' : 'Add to task board'}
+            </Button>
+          )}
           <Button
             variant="outlined"
             disabled={replacing}
