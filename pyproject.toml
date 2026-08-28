@@ -29,8 +29,16 @@ dynamic = ["version", "description", "authors", "urls", "keywords"]
 
 # Real-time collaboration on .naavrewf workflows. Optional: without it the
 # extension still works, each user editing their own copy of the file.
+# Pinned to the 4.2 line deliberately. It ships the @jupyter/collaboration-
+# extension and @jupyter/docprovider-extension 4.3.x labextensions, which is
+# what the "@jupyter/collaborative-drive": "~4.3.0" and "@jupyter/docprovider":
+# "~4.3.0" singletons in package.json are built against. Those are declared
+# singletons, so the versions must line up: a wider range lets pip pull a newer
+# jupyter-collaboration whose labextension either fails JupyterLab's
+# compatibility check outright or loads against mismatched singletons. Change
+# this and the package.json pins together.
 [project.optional-dependencies]
-collaboration = ["jupyter-collaboration>=4,<5"]
+collaboration = ["jupyter-collaboration>=4.2,<4.3"]
 
 # The entry-point name MUST equal the document's file type ('naavrewfdoc', see
 # src/index.ts): jupyter_server_ydoc resolves the class via YDOCS.get(file_type)
