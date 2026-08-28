@@ -29,6 +29,7 @@ import lodash from 'lodash';
 import { Composer } from './components/Composer';
 import React from 'react';
 import { ISettings, SettingsContext } from './settings';
+import { ChartContent, IChart, mergeChartChanges } from './utils/chart';
 
 /**
  * DocumentWidget: widget that represents the view or editor for a file type.
@@ -65,6 +66,13 @@ export class ExperimentManagerWidget extends ReactWidget {
   private _model: WorkflowModel;
 
   /**
+   * The document content this client last took from the shared model, i.e.
+   * what the composer's chart is a modification *of*. Local edits are diffed
+   * against it so a flush carries this user's changes and nothing else.
+   */
+  private _base: ChartContent = { nodes: {}, links: {} };
+
+  /**
    * Construct a `ExperimentManagerWidget`.
    *
    * @param context - The document's context.
@@ -95,9 +103,51 @@ export class ExperimentManagerWidget extends ReactWidget {
   render() {
     return (
       <SettingsContext.Provider value={this.settings}>
-        <Composer ref={this.composerRef} />
+        <Composer
+          ref={this.composerRef}
+          onChartChange={this._onComposerChartChange}
+        />
       </SettingsContext.Provider>
     );
+  }
+
+  /**
+   * Push local chart edits into the shared model, debounced so that rapid
+   * changes (dragging a node) coalesce into one write.
+   */
+  private _onComposerChartChange = lodash.debounce((chart: IChart): void => {
+    this._syncDocumentToModel(chart);
+  }, 50);
+
+  /**
+   * Write this client's *changes* to document content into the shared model.
+   *
+   * `chart` is a snapshot from when the user last touched the canvas, so the
+   * shared document may have moved on since. Diffing against `_base` keeps a
+   * collaborator's concurrent addition instead of deleting it as missing.
+   * View state (offset, scale, selected, hovered) is per-client and never
+   * written.
+   */
+  private _syncDocumentToModel(chart: IChart | null | undefined): void {
+    if (!chart) {
+      return;
+    }
+    const current = this._model.chart;
+    const merged = mergeChartChanges(this._base, chart, current);
+    const properties = chart.properties ?? current.properties;
+    if (
+      !lodash.isEqual(current.nodes, merged.nodes) ||
+      !lodash.isEqual(current.links, merged.links) ||
+      !lodash.isEqual(current.properties, properties)
+    ) {
+      this._model.chart = {
+        ...current,
+        nodes: merged.nodes,
+        links: merged.links,
+        properties
+      };
+    }
+    this._base = lodash.cloneDeep(merged);
   }
 
   /**
@@ -107,6 +157,7 @@ export class ExperimentManagerWidget extends ReactWidget {
     if (this.isDisposed) {
       return;
     }
+    this._onComposerChartChange.cancel();
     this._model.contentChanged.disconnect(this._onContentChanged);
     Signal.clearData(this);
     super.dispose();
@@ -144,16 +195,7 @@ export class ExperimentManagerWidget extends ReactWidget {
     if (event.type) {
       switch (event.type) {
         case 'focusout':
-          if (
-            !lodash.isEqual(
-              this._model.chart,
-              this.composerRef.current?.state.chart
-            ) &&
-            this.composerRef.current !== null &&
-            this.composerRef.current.state.chart !== null
-          ) {
-            this._model.chart = this.composerRef.current.state.chart;
-          }
+          this._syncDocumentToModel(this.composerRef.current?.state.chart);
           break;
       }
     }
@@ -164,6 +206,39 @@ export class ExperimentManagerWidget extends ReactWidget {
    * to changes on shared model's content.
    */
   private _onContentChanged = (): void => {
-    this.composerRef.current?.setState({ chart: this._model.chart });
+    const shared = this._model.chart;
+    this._base = lodash.cloneDeep({
+      nodes: shared.nodes,
+      links: shared.links
+    });
+    const local = this.composerRef.current?.state.chart ?? null;
+    this.composerRef.current?.setState({
+      chart: {
+        nodes: shared.nodes,
+        links: shared.links,
+        properties: shared.properties,
+        offset: local?.offset ?? shared.offset,
+        scale: local?.scale ?? shared.scale,
+        selected: this._pruneDeletedRef(local?.selected ?? {}, shared),
+        hovered: this._pruneDeletedRef(local?.hovered ?? {}, shared)
+      }
+    });
   };
+
+  /**
+   * Return the given selection/hover reference, or an empty one if it points
+   * at a node or link another client has since deleted.
+   */
+  private _pruneDeletedRef(
+    ref: IChart['selected'],
+    chart: ChartContent
+  ): IChart['selected'] {
+    if (
+      (ref.type === 'node' && ref.id && !(ref.id in chart.nodes)) ||
+      (ref.type === 'link' && ref.id && !(ref.id in chart.links))
+    ) {
+      return {};
+    }
+    return ref;
+  }
 }

@@ -1,4 +1,5 @@
 import ColorHash from 'color-hash';
+import * as lodash from 'lodash';
 import {
   IChart as IChartRFC,
   INode as INodeRFC,
@@ -10,6 +11,9 @@ import {
   VariableType
 } from '../naavre-common/types/NaaVRECatalogue/WorkflowCells';
 import { ISpecialCell } from './specialCells';
+
+/** The part of a chart that is document content, as opposed to view state. */
+export type ChartContent = Pick<IChart, 'nodes' | 'links'>;
 
 export interface IChartParam {
   node_id: string;
@@ -30,6 +34,53 @@ export interface IChartProps {
 
 export interface INode extends INodeRFC<INodeProps> {}
 export interface IChart extends IChartRFC<IChartProps, INodeProps> {}
+
+/**
+ * Apply one collection's local changes on top of the shared one.
+ *
+ * `base` is what this client last took from the shared document, `local` is
+ * what it holds now, and `remote` is where the shared document has got to.
+ * Entries the local user added or edited are applied on top of `remote`;
+ * entries they removed are removed from it. An entry missing from `local` that
+ * `base` never held belongs to another client and is left alone.
+ */
+function mergeCollection<T>(
+  base: Record<string, T>,
+  local: Record<string, T>,
+  remote: Record<string, T>
+): Record<string, T> {
+  const merged: Record<string, T> = { ...remote };
+  for (const [id, value] of Object.entries(local)) {
+    if (!lodash.isEqual(value, base[id])) {
+      merged[id] = value;
+    }
+  }
+  for (const id of Object.keys(base)) {
+    if (!(id in local)) {
+      delete merged[id];
+    }
+  }
+  return merged;
+}
+
+/**
+ * Merge a client's local chart content into the shared content, sending what
+ * that client changed rather than everything it happens to hold.
+ *
+ * Writing a whole snapshot instead loses data: setChart (src/model.ts) deletes
+ * keys the snapshot does not mention, so a node a collaborator added while a
+ * local edit was pending would be deleted by the next flush, on every client.
+ */
+export function mergeChartChanges(
+  base: ChartContent,
+  local: ChartContent,
+  remote: ChartContent
+): ChartContent {
+  return {
+    nodes: mergeCollection(base.nodes, local.nodes, remote.nodes),
+    links: mergeCollection(base.links, local.links, remote.links)
+  };
+}
 
 export const defaultChart: IChart = {
   offset: {
