@@ -11,6 +11,15 @@ export interface IDependency {
   asname?: string | null;
 }
 
+/**
+ * The types a cell input/output can have.
+ *
+ * This is not a UI choice: it mirrors `BaseVariable.TYPE_CHOICES` in the
+ * catalogue service (app/workflow_cells/models.py), which validates it on
+ * write. Adding a type here without adding it there makes the catalogue reject
+ * the cell with `400 {"type": ["\"bool\" is not a valid choice."]}` at the
+ * point it is saved — long after the user picked it. Widen the service first.
+ */
 export type VariableType = 'int' | 'float' | 'str' | 'list';
 
 export interface IBaseVariable {

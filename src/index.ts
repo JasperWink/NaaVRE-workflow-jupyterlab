@@ -27,6 +27,7 @@ import { ISettings } from './settings';
 import { ToolbarItems } from './toolbarItems';
 import { Commands, CommandIDs } from './commands';
 import { setDocumentManager } from './naavre-common/notebook';
+import { setCommandRegistry } from './boardAccess';
 
 /**
  * The name of the factory that creates editor widgets.
@@ -73,6 +74,11 @@ const extension: JupyterFrontEndPlugin<void> = {
     // Make the document manager available to the composer so draft nodes can
     // insert cells into a notebook's live shared model (see AddToNotebookDialog).
     setDocumentManager(docManager);
+
+    // Make the command registry available to the composer so draft nodes can
+    // put cards on the NaaVRE task board, if that extension is installed
+    // (see src/boardAccess.ts).
+    setCommandRegistry(app.commands);
 
     if (launcher) {
       launcher.add({
