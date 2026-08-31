@@ -21,9 +21,11 @@ import {
   validateLink
 } from '../utils/chart';
 import { ISpecialCell } from '../utils/specialCells';
+import { INodePresence, IWorkflowSelection } from '../utils/presence';
 import { theme } from '../Theme';
 import { SettingsContext } from '../settings';
 import { NodeCustom } from './chart/NodeCustom';
+import { NodePresenceContext } from './chart/NodePresenceContext';
 import { nodeInnerCustomFactory } from './chart/NodeInnerCustom';
 import { PortCustom } from './chart/PortCustom';
 import { LinkCustom } from './chart/LinkCustom';
@@ -39,6 +41,13 @@ export interface IProps {
    * delete). The host widget pushes these into the shared document model.
    */
   onChartChange?: (chart: IChart) => void;
+
+  /**
+   * Called when the node this user has open changes. The host widget puts it
+   * on the awareness channel so other clients can show where this user is.
+   * Not debounced: a presence indicator that lags is worse than none.
+   */
+  onSelectionChange?: (selection: IWorkflowSelection) => void;
 }
 
 export interface IState {
@@ -47,6 +56,8 @@ export interface IState {
   selectedCellNode: HTMLDivElement | null;
   selectedChartParam: IChartParam | null;
   runWorkflowDialogOpen: boolean;
+  /** Remote collaborators by node id, pushed in by the host widget. */
+  nodePresence: INodePresence;
 }
 
 export const DefaultState: IState = {
@@ -54,7 +65,8 @@ export const DefaultState: IState = {
   selectedCellInList: null,
   selectedCellNode: null,
   selectedChartParam: null,
-  runWorkflowDialogOpen: false
+  runWorkflowDialogOpen: false,
+  nodePresence: {}
 };
 
 export class Composer extends React.Component<IProps, IState> {
@@ -62,6 +74,15 @@ export class Composer extends React.Component<IProps, IState> {
   containerRef: React.RefObject<HTMLDivElement>;
   static contextType = SettingsContext;
   declare context: React.ContextType<typeof SettingsContext>;
+
+  /** Node currently being dragged, or null. See `_currentSelection`. */
+  private _draggingNodeId: string | null = null;
+
+  /** Last selection handed to `onSelectionChange`, to avoid repeat reports. */
+  private _advertisedSelection: IWorkflowSelection = {
+    nodeId: null,
+    editing: false
+  };
 
   constructor(props: IProps) {
     super(props);
@@ -80,6 +101,15 @@ export class Composer extends React.Component<IProps, IState> {
             newChart.properties.params = newChart.properties.params.filter(
               param => param.node_id in newChart.nodes
             );
+            break;
+          }
+          case 'onDragNode': {
+            this._draggingNodeId = args[0]?.id ?? null;
+            break;
+          }
+          case 'onDragNodeStop': {
+            this._draggingNodeId = null;
+            break;
           }
         }
         this.setState(
@@ -138,6 +168,34 @@ export class Composer extends React.Component<IProps, IState> {
     this.setState({ runWorkflowDialogOpen: open });
   };
 
+  /** Replace the remote collaborators shown on the canvas. */
+  setNodePresence = (nodePresence: INodePresence) => {
+    this.setState({ nodePresence: nodePresence });
+  };
+
+  /**
+   * The node this user currently has open, for other clients to see.
+   *
+   * A drag in progress and an open parameter dialog both count as editing and
+   * win over the plain selection: they are the cases where a concurrent edit
+   * actually costs the other user work.
+   */
+  private _currentSelection = (): IWorkflowSelection => {
+    // A drag is an edit in progress, but react-flow-chart does not select the
+    // node being dragged, so it is tracked separately in chartStateActions.
+    if (this._draggingNodeId !== null) {
+      return { nodeId: this._draggingNodeId, editing: true };
+    }
+    const paramNodeId = this.state.selectedChartParam?.node_id ?? null;
+    if (paramNodeId !== null) {
+      return { nodeId: paramNodeId, editing: true };
+    }
+    const selected = this.state.chart?.selected;
+    const nodeId =
+      selected?.type === 'node' && selected.id ? selected.id : null;
+    return { nodeId: nodeId, editing: false };
+  };
+
   exportWorkflow = async (browserFactory: IFileBrowserFactory) => {
     if (this.state.chart === null) {
       console.error('Export failed: workflow is null');
@@ -166,6 +224,18 @@ export class Composer extends React.Component<IProps, IState> {
 
   componentDidUpdate() {
     // TODO: Implement chart sanity checks
+
+    // Selection is reachable from many actions (node click, canvas click,
+    // delete, a node removed by another client), so it is reported from here
+    // rather than from each of them.
+    const selection = this._currentSelection();
+    if (
+      selection.nodeId !== this._advertisedSelection.nodeId ||
+      selection.editing !== this._advertisedSelection.editing
+    ) {
+      this._advertisedSelection = selection;
+      this.props.onSelectionChange?.(selection);
+    }
   }
 
   render(): React.ReactElement {
@@ -209,20 +279,22 @@ export class Composer extends React.Component<IProps, IState> {
                 overflow: 'hidden'
               }}
             >
-              <FlowChart
-                chart={this.state.chart}
-                callbacks={this.chartStateActions}
-                config={this.chartConfig}
-                Components={{
-                  Node: NodeCustom as React.FunctionComponent<INodeDefaultProps>,
-                  NodeInner: nodeInnerCustomFactory(
-                    this.state.chart,
-                    this.setSelectedChartParam
-                  ),
-                  Port: PortCustom,
-                  Link: LinkCustom
-                }}
-              />
+              <NodePresenceContext.Provider value={this.state.nodePresence}>
+                <FlowChart
+                  chart={this.state.chart}
+                  callbacks={this.chartStateActions}
+                  config={this.chartConfig}
+                  Components={{
+                    Node: NodeCustom as React.FunctionComponent<INodeDefaultProps>,
+                    NodeInner: nodeInnerCustomFactory(
+                      this.state.chart,
+                      this.setSelectedChartParam
+                    ),
+                    Port: PortCustom,
+                    Link: LinkCustom
+                  }}
+                />
+              </NodePresenceContext.Provider>
               {this.state.chart.selected.id && (
                 <ChartElementEditor
                   chart={this.state.chart}
