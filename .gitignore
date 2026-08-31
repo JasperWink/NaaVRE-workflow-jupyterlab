@@ -143,7 +143,7 @@ storybook-static
 # Local dev environment (created by run.sh, never committed)
 venv/
 .venv/
-.jupyter_ystore.db
+.jupyter_ystore*.db
 junit.xml
 coverage/
 

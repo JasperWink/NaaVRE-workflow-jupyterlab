@@ -30,6 +30,12 @@ import { Composer } from './components/Composer';
 import React from 'react';
 import { ISettings, SettingsContext } from './settings';
 import { ChartContent, IChart, mergeChartChanges } from './utils/chart';
+import {
+  collectNodePresence,
+  INodePresence,
+  IWorkflowSelection,
+  SELECTION_FIELD
+} from './utils/presence';
 
 /**
  * DocumentWidget: widget that represents the view or editor for a file type.
@@ -73,6 +79,13 @@ export class ExperimentManagerWidget extends ReactWidget {
   private _base: ChartContent = { nodes: {}, links: {} };
 
   /**
+   * Remote collaborators by node id, as last handed to the composer. Kept so
+   * awareness updates that do not change what is drawn cost nothing: awareness
+   * fires far more often than the picture changes.
+   */
+  private _presence: INodePresence = {};
+
+  /**
    * Construct a `ExperimentManagerWidget`.
    *
    * @param context - The document's context.
@@ -86,8 +99,12 @@ export class ExperimentManagerWidget extends ReactWidget {
 
     context.ready.then(value => {
       this._model.contentChanged.connect(this._onContentChanged);
+      this._model.clientChanged.connect(this._onClientChanged);
 
       this._onContentChanged();
+      // Clients already in the document have their awareness state; the
+      // signal only reports changes from here on.
+      this._applyPresence(this._model.sharedModel.awareness.getStates());
 
       this.update();
     });
@@ -106,6 +123,7 @@ export class ExperimentManagerWidget extends ReactWidget {
         <Composer
           ref={this.composerRef}
           onChartChange={this._onComposerChartChange}
+          onSelectionChange={this._onComposerSelectionChange}
         />
       </SettingsContext.Provider>
     );
@@ -118,6 +136,46 @@ export class ExperimentManagerWidget extends ReactWidget {
   private _onComposerChartChange = lodash.debounce((chart: IChart): void => {
     this._syncDocumentToModel(chart);
   }, 50);
+
+  /**
+   * Publish the node this user has open on the awareness channel.
+   *
+   * Awareness is not document content — it is never written to the shared map
+   * and never saved — so this does not touch the CRDT or make the document
+   * dirty. It also does not prevent two clients editing one node; it makes
+   * that situation visible so they can avoid it.
+   */
+  private _onComposerSelectionChange = (
+    selection: IWorkflowSelection
+  ): void => {
+    this._model.sharedModel.awareness.setLocalStateField(
+      SELECTION_FIELD,
+      selection
+    );
+  };
+
+  /**
+   * Handle an awareness change from any client sharing this document.
+   */
+  private _onClientChanged = (
+    sender: WorkflowModel,
+    clients: Map<number, any>
+  ): void => {
+    this._applyPresence(clients);
+  };
+
+  /**
+   * Recompute who is on which node and pass it to the composer, skipping the
+   * update when the result is unchanged.
+   */
+  private _applyPresence(clients: Map<number, any>): void {
+    const presence = collectNodePresence(clients, this._model.clientId);
+    if (lodash.isEqual(presence, this._presence)) {
+      return;
+    }
+    this._presence = presence;
+    this.composerRef.current?.setNodePresence(presence);
+  }
 
   /**
    * Write this client's *changes* to document content into the shared model.
@@ -159,6 +217,15 @@ export class ExperimentManagerWidget extends ReactWidget {
     }
     this._onComposerChartChange.cancel();
     this._model.contentChanged.disconnect(this._onContentChanged);
+    this._model.clientChanged.disconnect(this._onClientChanged);
+    if (!this._model.isDisposed) {
+      // Drop this client's flag rather than leaving other clients to wait for
+      // the awareness state to time out.
+      this._model.sharedModel.awareness.setLocalStateField(
+        SELECTION_FIELD,
+        null
+      );
+    }
     Signal.clearData(this);
     super.dispose();
   }
