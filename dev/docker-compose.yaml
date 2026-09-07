@@ -19,7 +19,6 @@ services:
 
   catalogue-service:
     image: ghcr.io/naavre/naavre-catalogue-service:v0.6.0
-    network_mode: host
     ports:
       - '127.0.0.1:8000:8000'
     volumes:
@@ -31,30 +30,30 @@ services:
       DJANGO_SUPERUSER_USERNAME: admin
       DJANGO_SUPERUSER_PASSWORD: admin
       DJANGO_SUPERUSER_EMAIL: example@example.org
-      DB_HOST: localhost
+      DB_HOST: catalogue-db
       DB_PORT: 5432
       DB_USER: postgres
       DB_PASSWORD: postgres-password
       DB_NAME: postgres
       OIDC_CONFIGURATION_URL: https://naavre-dev.minikube.test/auth/realms/vre/.well-known/openid-configuration
-      S3_ENDPOINT_URL: http://localhost:9000
+      S3_ENDPOINT_URL: http://catalogue-s3:9000
       S3_BUCKET_NAME: dev-bucket
       S3_ACCESS_KEY: fake-s3-access-key
       S3_SECRET_KEY: fake-s3-secret-key
 
   catalogue-db:
     image: postgres:17
-    network_mode: host
-    ports:
-      - '127.0.0.1:5432:5432'
     environment:
       POSTGRES_PASSWORD: postgres-password
 
   catalogue-s3:
     image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     command: ["server", "/data", "--console-address", ":9001"]
-    network_mode: host
     ports:
+      # 9000 is the S3 API, 9001 the console. Other services reach the API in
+      # network as catalogue-s3:9000 and do not need this, but MINIO_SERVER_URL
+      # in catalogue-s3.env advertises http://localhost:9000, so the console's
+      # download links only resolve while 9000 is published on the host too.
       - "127.0.0.1:9000:9000"
       - "127.0.0.1:9001:9001"
     env_file:
@@ -70,9 +69,10 @@ services:
     depends_on:
       catalogue-s3:
         condition: service_healthy
-    network_mode: host
     env_file:
       - catalogue-s3.env
+    environment:
+      MINIO_SERVER_URL: http://catalogue-s3:9000
     entrypoint: ["bash", "-e"]
     command: "/configure-s3.sh"
     volumes:
