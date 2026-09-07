@@ -151,9 +151,8 @@ async function pathExists(path: string): Promise<boolean> {
   }
 }
 
-// Fallback for when the document manager is unavailable: append the cell by
-// rewriting the notebook file via the Contents API. (Changes only show once the
-// notebook is (re)opened.)
+// Fallback when the document manager is unavailable: rewrite the notebook file
+// via the Contents API. Changes only show once it is (re)opened.
 async function appendCellViaContentsApi(
   path: string,
   cellSource: string

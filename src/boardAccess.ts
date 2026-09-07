@@ -1,17 +1,7 @@
-// Lets code in the composer — the draft-node inspector in the chart — put a
-// card on the NaaVRE task board, which lives in a separate extension
-// (@naavre/taskboard-jupyterlab).
-//
-// The two are deliberately independent repos, so nothing here can import from
-// the board. Instead the board registers a JupyterLab command and we execute it
-// by name: a string contract, with no build-time dependency in either
-// direction. That also makes the board genuinely optional — when it is not
-// installed the command is simply absent and the composer hides its
-// board-specific affordances.
-//
-// The command id and its argument names are part of the board's public API;
-// keep them in sync with `CommandIDs.addTask` in the task board extension
-// (src/commands.ts there).
+// Puts cards on the NaaVRE task board (@naavre/taskboard-jupyterlab). Separate
+// repos, so the board is reached by command name rather than import — a
+// string contract that also makes it optional. Keep its CommandIDs.addTask
+// in sync.
 
 import { CommandRegistry } from '@lumino/commands';
 
@@ -21,38 +11,23 @@ export const ADD_TASK_COMMAND = 'naavre-taskboard:add-task';
 let _commands: CommandRegistry | null = null;
 
 /**
- * Register the application's command registry. Called once from this
- * extension's activate function (see src/index.ts), mirroring how
- * naavre-common/notebook.ts exposes the document manager to the composer.
+ * Register the application's command registry. Called once from src/index.ts.
  */
 export function setCommandRegistry(commands: CommandRegistry | null): void {
   _commands = commands;
 }
 
 /**
- * Whether the task board extension is installed and has registered its
- * commands. Components use this to decide whether to offer board actions.
- *
- * This only becomes true once the board plugin has activated. Both plugins are
- * `autoStart`, and every caller here renders in response to a user selecting a
- * node — long after startup — so the ordering between the two is not a concern
- * in practice.
+ * Whether the board extension is installed, so components can offer its
+ * actions. True only once its plugin has activated, long before any caller.
  */
 export function taskBoardAvailable(): boolean {
   return _commands !== null && _commands.hasCommand(ADD_TASK_COMMAND);
 }
 
 /**
- * Add a card to the first column of the task board.
- *
- * The board owns what this means: it opens its shared document in the
- * background, appends the card and persists it, so the card shows up right away
- * on every client that has the board open — and on the next open for those that
- * do not. It is an independent card: nothing links it back to whatever the
- * fields were copied from.
- *
- * Rejects if the board is unavailable, or with whatever the board reports if it
- * could not accept the card, so callers can tell the user why nothing appeared.
+ * Add a card to the board's first column. The board persists it to its shared
+ * document; the card is independent. Rejects if unavailable or refused.
  */
 export async function addTaskToBoard(fields: {
   title: string;

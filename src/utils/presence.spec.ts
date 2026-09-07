@@ -1,6 +1,5 @@
-// Presence over the awareness channel: who has which node open. Awareness
-// states come from other clients, so collectNodePresence has to cope with
-// whatever they contain. See utils/presence.ts.
+// Presence over awareness: who has which node open. States come from other
+// clients, so collectNodePresence must cope with anything. See presence.ts.
 
 import {
   collectNodePresence,

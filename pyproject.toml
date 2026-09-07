@@ -27,22 +27,22 @@ dependencies = [
 ]
 dynamic = ["version", "description", "authors", "urls", "keywords"]
 
-# Real-time collaboration on .naavrewf workflows. Optional: without it the
-# extension still works, each user editing their own copy of the file.
-# Pinned to the 4.2 line deliberately. It ships the @jupyter/collaboration-
-# extension and @jupyter/docprovider-extension 4.3.x labextensions, which is
-# what the "@jupyter/collaborative-drive": "~4.3.0" and "@jupyter/docprovider":
-# "~4.3.0" singletons in package.json are built against. Those are declared
-# singletons, so the versions must line up: a wider range lets pip pull a newer
-# jupyter-collaboration whose labextension either fails JupyterLab's
-# compatibility check outright or loads against mismatched singletons. Change
-# this and the package.json pins together.
+# Optional RTC on .naavrewf. The labextensions ship in -ui/-docprovider, which
+# jupyter-collaboration pins only as <3, so pin all three: they must match
+# package.json's ~4.4.2 singletons. 4.4.2 is also the fix for GHSA-8w8w-78q2-76qw
+# (unauthenticated RTC timeline/undo endpoints), and needs Python >= 3.10.
+# JupyterLab is held at 4.5 because 4.6 bundles @jupyter/ydoc v4, which this
+# line does not accept; moving up means the jupyter-collaboration 5.0 line.
 [project.optional-dependencies]
-collaboration = ["jupyter-collaboration>=4.2,<4.3"]
+collaboration = [
+    "jupyter-collaboration>=4.4.2,<4.5",
+    "jupyter-collaboration-ui>=2.4.2,<2.5",
+    "jupyter-docprovider>=2.4.2,<2.5",
+    "jupyterlab>=4.5,<4.6",
+]
 
-# The entry-point name MUST equal the document's file type ('naavrewfdoc', see
-# src/index.ts): jupyter_server_ydoc resolves the class via YDOCS.get(file_type)
-# and would otherwise fall back to the generic YFile.
+# The name MUST equal the file type ('naavrewfdoc', src/index.ts):
+# jupyter_server_ydoc looks the class up by it, else falls back to YFile.
 [project.entry-points.jupyter_ydoc]
 naavrewfdoc = "NaaVRE_workflow_jupyterlab.ydoc:YWorkflow"
 

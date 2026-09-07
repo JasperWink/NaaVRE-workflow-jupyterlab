@@ -2,16 +2,10 @@
 // Copyright 2023 Project Jupyter Contributors; licensed under the BSD 3-Clause License license:
 // https://github.com/jupyterlab/extension-examples/blob/main/LICENSE
 //
-// The chart is stored under granular keys in the `content` map: one JSON
-// object per node under 'node:<id>' and one per link under 'link:<id>'.
-// Writing only the keys that actually changed lets Yjs merge concurrent edits
-// to different nodes, instead of last-write-wins on the whole chart, and keeps
-// each update proportional to the element edited rather than to the size of
-// the document.
-//
-// The document holds document *content* only. View state — canvas pan
-// (`offset`), zoom (`scale`), `selected` and `hovered` — is per-client and is
-// never stored or synced.
+// The chart lives under granular keys in `content` ('node:<id>', 'link:<id>'),
+// so Yjs merges concurrent edits to different elements instead of last-write-
+// wins. View state (offset, scale, selected, hovered) is per-client and is
+// never stored.
 
 import { YDocument, DocumentChange } from '@jupyter/ydoc';
 
@@ -405,10 +399,8 @@ export class Workflow extends YDocument<WorkflowChange> {
   }
 
   /**
-   * Reassemble the chart from the granular content keys. Corrupt values are
-   * skipped rather than throwing, so a damaged document still opens. View
-   * state (pan, zoom, selection, hover) is per-client and is not stored, so it
-   * always comes back at its default.
+   * Reassemble the chart from the granular keys, skipping corrupt values so a
+   * damaged document still opens. View state comes back at its default.
    */
   getChart(): IChart {
     const nodes: IChart['nodes'] = {};
@@ -443,10 +435,8 @@ export class Workflow extends YDocument<WorkflowChange> {
   }
 
   /**
-   * Write the chart, touching only the keys whose value actually changed and
-   * deleting the keys of removed nodes and links. Concurrent edits to
-   * different elements then live on different Yjs keys and merge instead of
-   * overwriting each other; a no-op write emits nothing.
+   * Write only the keys that changed, deleting those of removed elements, so
+   * concurrent edits merge rather than overwrite. A no-op write emits nothing.
    */
   setChart(chart: IChart): void {
     const desired = new Map<string, string>();

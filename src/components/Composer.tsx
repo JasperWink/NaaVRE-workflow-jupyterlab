@@ -36,16 +36,12 @@ import { CellPopup } from './cells/CellPopup';
 import { NodeParamValueDialog } from './chart/NodeParamValue';
 
 export interface IProps {
-  /**
-   * Called whenever the chart changes locally (drag, link, drop, draft edit,
-   * delete). The host widget pushes these into the shared document model.
-   */
+  /** Local chart changes (drag, link, drop, edit, delete), pushed to the model. */
   onChartChange?: (chart: IChart) => void;
 
   /**
-   * Called when the node this user has open changes. The host widget puts it
-   * on the awareness channel so other clients can show where this user is.
-   * Not debounced: a presence indicator that lags is worse than none.
+   * The open node changed; the widget puts it on the awareness channel. Not
+   * debounced — a presence indicator that lags is worse than none.
    */
   onSelectionChange?: (selection: IWorkflowSelection) => void;
 }
@@ -174,11 +170,8 @@ export class Composer extends React.Component<IProps, IState> {
   };
 
   /**
-   * The node this user currently has open, for other clients to see.
-   *
-   * A drag in progress and an open parameter dialog both count as editing and
-   * win over the plain selection: they are the cases where a concurrent edit
-   * actually costs the other user work.
+   * The node this user has open. A drag or an open dialog counts as editing and
+   * beats plain selection, being where a concurrent edit actually costs work.
    */
   private _currentSelection = (): IWorkflowSelection => {
     // A drag is an edit in progress, but react-flow-chart does not select the
@@ -225,9 +218,7 @@ export class Composer extends React.Component<IProps, IState> {
   componentDidUpdate() {
     // TODO: Implement chart sanity checks
 
-    // Selection is reachable from many actions (node click, canvas click,
-    // delete, a node removed by another client), so it is reported from here
-    // rather than from each of them.
+    // Reported here because selection is reachable from many actions.
     const selection = this._currentSelection();
     if (
       selection.nodeId !== this._advertisedSelection.nodeId ||
