@@ -8,9 +8,8 @@ export interface ISpecialCell extends ICell {
   type: string;
 }
 
-// Node type for user-defined "draft" nodes: placeholder cells whose inputs and
-// outputs are defined in the composer, before a containerized cell (or even a
-// notebook) exists. They are not backed by the catalogue.
+// User-defined "draft" nodes: placeholder cells whose I/O is defined in the
+// composer before a containerized cell exists. Not backed by the catalogue.
 export const DRAFT_CELL_TYPE = 'draft-cell';
 
 export interface IDraftCellInit {
@@ -18,9 +17,7 @@ export interface IDraftCellInit {
   description?: string;
   inputs?: Array<IInput>;
   outputs?: Array<IOutput>;
-  // Reuse the existing url/id when editing an existing draft node, so the chart
-  // node keeps its identity (see cellToChartNode, which derives the node id from
-  // cell.url).
+  // Reuse the url when editing, so the node keeps its id (cellToChartNode).
   url?: string;
 }
 
@@ -29,9 +26,8 @@ function generateDraftCellUrl(): string {
   return `${DRAFT_CELL_TYPE}-${Date.now().toString(36)}-${rand}`;
 }
 
-// Build an ISpecialCell describing a draft node. Modelled on the Splitter/Merger
-// entries below, but with a generated url, no container image, is_draft = true,
-// and user-supplied title/description/inputs/outputs.
+// An ISpecialCell for a draft node: like the Splitter/Merger entries below, but
+// with a generated url, no image, is_draft = true and user-supplied fields.
 export function makeDraftCell({
   title,
   description = '',

@@ -27,11 +27,8 @@ from pycrdt import Awareness, Doc, Map
 try:
     from jupyter_ydoc.ybasedoc import YBaseDoc
 except AttributeError:
-    # jupyter_ydoc eagerly loads every registered entry point on first import,
-    # including this module. If this module is imported first, that load
-    # re-enters here before YWorkflow exists. The base class is already
-    # imported by then, so take it directly; jupyter_ydoc re-initializes
-    # cleanly on its next import.
+    # Re-entrant import: jupyter_ydoc loads this entry point before YWorkflow
+    # exists, so take the already-imported base class directly.
     YBaseDoc = sys.modules["jupyter_ydoc.ybasedoc"].YBaseDoc
 
 # Mirrors ``defaultChart`` in ``src/utils/chart.ts``.

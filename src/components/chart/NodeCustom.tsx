@@ -48,9 +48,7 @@ const NodeContainer = styled.div<{
 `;
 
 /**
- * Name flags for the collaborators currently on this node, stacked above the
- * node's title bar. Rendered inside NodeTitle so they sit directly on top of
- * it whatever height the title turns out to be.
+ * Name flags for collaborators on this node, stacked above its title bar.
  */
 function CollaboratorFlags({
   collaborators
@@ -186,9 +184,8 @@ function NodeCustomElement(
   ref: ForwardedRef<HTMLDivElement>,
   collaborators: Array<ICollaborator>
 ) {
-  // Draft nodes are not catalogue cells, but they carry user-defined
-  // inputs/outputs and should render like (draft) workflow-cells rather than the
-  // fixed-size Splitter/Merger "special" nodes.
+  // Drafts carry user-defined I/O, so they render as cells rather than as
+  // the fixed-size special nodes.
   const isDraftCell = node.type === DRAFT_CELL_TYPE;
   const isSpecialNode = node.type !== 'workflow-cell' && !isDraftCell;
 
@@ -230,9 +227,7 @@ export const NodeCustom = React.forwardRef(
     { node, children, ...otherProps }: INodeDefaultProps & { node: INode },
     ref: ForwardedRef<HTMLDivElement>
   ) => {
-    // Read from context rather than props: react-flow-chart renders
-    // `Components.Node` with a fixed prop set, and swapping the component out
-    // to inject presence would remount every node. See NodePresenceContext.
+    // Via context, not props: a new component type remounts every node.
     const presence = useContext(NodePresenceContext);
     return NodeCustomElement(
       { node, children, ...otherProps },

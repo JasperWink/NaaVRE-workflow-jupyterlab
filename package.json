@@ -62,8 +62,8 @@
     "dependencies": {
         "@emotion/react": "^11.14.0",
         "@emotion/styled": "^11.14.0",
-        "@jupyter/collaborative-drive": "~4.3.0",
-        "@jupyter/docprovider": "~4.3.0",
+        "@jupyter/collaborative-drive": "~4.4.2",
+        "@jupyter/docprovider": "~4.4.2",
         "@jupyterlab/application": "^4.0.0",
         "@jupyterlab/docmanager": "^4.0.0",
         "@jupyterlab/launcher": "^4.3.4",

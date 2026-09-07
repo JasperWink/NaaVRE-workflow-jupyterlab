@@ -1,15 +1,6 @@
-// Per-client presence, exchanged over the document's awareness channel.
-//
-// Awareness is not document content: it is never written to the shared
-// document, never saved to disk, and expires on its own when a client
-// disconnects. That makes it the right home for "who is looking at what",
-// which is ephemeral by nature — unlike the chart, which every client must
-// agree on and keep.
-//
-// Presence does not resolve a conflict. Two clients editing one node still
-// collide on that node's key in the shared document (see setChart in
-// model.ts). What presence does is make the collision visible before it
-// happens, so users can avoid it rather than silently lose an edit.
+// Per-client presence over the document's awareness channel: never written to
+// the document, never saved, and expiring on disconnect. It does not resolve
+// conflicts — it makes them visible before they happen.
 
 /** Awareness field under which this extension advertises the local selection. */
 export const SELECTION_FIELD = 'workflowSelection';
@@ -46,15 +37,8 @@ function readString(source: any, key: string): string | null {
 }
 
 /**
- * Build the per-node collaborator lists from raw awareness states.
- *
- * Remote states are arbitrary JSON written by other clients, so every field is
- * read defensively: a partial or malformed state is skipped rather than
- * breaking the canvas. The local client is excluded — users do not need a flag
- * telling them where they already are.
- *
- * @param states Awareness states, keyed by client id.
- * @param localClientId The client id of this browser, which is left out.
+ * Per-node collaborator lists from raw awareness states. Remote states are
+ * arbitrary JSON, so malformed ones are skipped; the local client is excluded.
  */
 export function collectNodePresence(
   states: Map<number, any>,
@@ -94,10 +78,8 @@ export function collectNodePresence(
 }
 
 /**
- * Pick black or white for text drawn on the given colour.
- *
- * User colours are assigned by JupyterLab across the whole hue range, so a
- * fixed text colour is unreadable on part of that range.
+ * Black or white text for the given colour: JupyterLab assigns user colours
+ * across the whole hue range, where a fixed text colour is unreadable.
  */
 export function readableTextColor(background: string): string {
   const hex = background.replace('#', '');

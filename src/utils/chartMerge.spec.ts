@@ -1,6 +1,5 @@
-// Concurrent editing of a workflow: a client writes the changes it made, not
-// the whole chart it happens to hold. See mergeChartChanges in utils/chart.ts
-// and _syncDocumentToModel in widget.tsx.
+// Concurrent editing: a client writes what it changed, not the chart it holds.
+// See mergeChartChanges (utils/chart.ts) and _syncDocumentToModel (widget.tsx).
 
 import * as Y from 'yjs';
 
@@ -80,9 +79,7 @@ describe('mergeChartChanges', () => {
 });
 
 describe('an edit that mutates the chart in place', () => {
-  // react-flow-chart edits the chart object it is handed rather than making a
-  // new one (see onDragNode), so this is what a drag does to whatever object
-  // the composer was given.
+  // react-flow-chart mutates the chart it is handed; this is what a drag does.
   function dragInPlace(c: ChartContent, id: string, dx: number): void {
     const n = c.nodes[id];
     c.nodes[id] = {
@@ -107,9 +104,8 @@ describe('an edit that mutates the chart in place', () => {
   });
 
   it('produces nothing when the base aliases what the drag mutated', () => {
-    // The bug this guards against: give the base and the composer the same
-    // object and the drag edits both, so the diff sees no change and the edit
-    // is never written.
+    // Guards the bug where base and composer share an object, so the diff
+    // comes out empty.
     const shared = content([node('n1')]);
     const aliased = shared; // what handing out the model's cache looked like
 
@@ -121,10 +117,7 @@ describe('an edit that mutates the chart in place', () => {
 });
 
 describe('two clients editing the same workflow', () => {
-  /**
-   * Two shared models wired together the way the collaboration room wires
-   * them: every update one produces is applied to the other.
-   */
+  /** Two shared models wired as the collaboration room wires them. */
   function room(): [Workflow, Workflow] {
     const A = new Workflow();
     const B = new Workflow();

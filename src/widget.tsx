@@ -72,16 +72,14 @@ export class ExperimentManagerWidget extends ReactWidget {
   private _model: WorkflowModel;
 
   /**
-   * The document content this client last took from the shared model, i.e.
-   * what the composer's chart is a modification *of*. Local edits are diffed
+   * What this client last took from the shared model. Local edits are diffed
    * against it so a flush carries this user's changes and nothing else.
    */
   private _base: ChartContent = { nodes: {}, links: {} };
 
   /**
-   * Remote collaborators by node id, as last handed to the composer. Kept so
-   * awareness updates that do not change what is drawn cost nothing: awareness
-   * fires far more often than the picture changes.
+   * Collaborators by node id, as last handed to the composer, so awareness
+   * updates that change nothing drawn cost nothing.
    */
   private _presence: INodePresence = {};
 
@@ -129,21 +127,14 @@ export class ExperimentManagerWidget extends ReactWidget {
     );
   }
 
-  /**
-   * Push local chart edits into the shared model, debounced so that rapid
-   * changes (dragging a node) coalesce into one write.
-   */
+  /** Push local edits into the shared model, debounced so drags coalesce. */
   private _onComposerChartChange = lodash.debounce((chart: IChart): void => {
     this._syncDocumentToModel(chart);
   }, 50);
 
   /**
-   * Publish the node this user has open on the awareness channel.
-   *
-   * Awareness is not document content — it is never written to the shared map
-   * and never saved — so this does not touch the CRDT or make the document
-   * dirty. It also does not prevent two clients editing one node; it makes
-   * that situation visible so they can avoid it.
+   * Publish the node this user has open on the awareness channel, which never
+   * touches the CRDT. It makes collisions visible, it does not prevent them.
    */
   private _onComposerSelectionChange = (
     selection: IWorkflowSelection
@@ -154,9 +145,7 @@ export class ExperimentManagerWidget extends ReactWidget {
     );
   };
 
-  /**
-   * Handle an awareness change from any client sharing this document.
-   */
+  /** Handle an awareness change from any client sharing this document. */
   private _onClientChanged = (
     sender: WorkflowModel,
     clients: Map<number, any>
@@ -164,10 +153,7 @@ export class ExperimentManagerWidget extends ReactWidget {
     this._applyPresence(clients);
   };
 
-  /**
-   * Recompute who is on which node and pass it to the composer, skipping the
-   * update when the result is unchanged.
-   */
+  /** Recompute who is on which node, skipping the update when unchanged. */
   private _applyPresence(clients: Map<number, any>): void {
     const presence = collectNodePresence(clients, this._model.clientId);
     if (lodash.isEqual(presence, this._presence)) {
@@ -178,13 +164,8 @@ export class ExperimentManagerWidget extends ReactWidget {
   }
 
   /**
-   * Write this client's *changes* to document content into the shared model.
-   *
-   * `chart` is a snapshot from when the user last touched the canvas, so the
-   * shared document may have moved on since. Diffing against `_base` keeps a
-   * collaborator's concurrent addition instead of deleting it as missing.
-   * View state (offset, scale, selected, hovered) is per-client and never
-   * written.
+   * Write this client's *changes* into the shared model. `chart` is a snapshot,
+   * so diffing against `_base` keeps a collaborator's concurrent additions.
    */
   private _syncDocumentToModel(chart: IChart | null | undefined): void {
     if (!chart) {
@@ -292,10 +273,7 @@ export class ExperimentManagerWidget extends ReactWidget {
     });
   };
 
-  /**
-   * Return the given selection/hover reference, or an empty one if it points
-   * at a node or link another client has since deleted.
-   */
+  /** The given selection/hover, or empty if another client deleted its target. */
   private _pruneDeletedRef(
     ref: IChart['selected'],
     chart: ChartContent

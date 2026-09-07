@@ -1,19 +1,15 @@
 import { IDocumentManager } from '@jupyterlab/docmanager';
 import { NotebookPanel } from '@jupyterlab/notebook';
 
-// The JupyterLab document manager, registered once from the extension's
-// activate function (see index.ts). It lets us open notebooks and write into
-// their live (shared) model, so an added cell appears immediately in an already
-// open notebook instead of only landing on disk.
+// The document manager, registered once from index.ts. Writing to a notebook's
+// live shared model makes added cells appear without a reopen.
 let _docManager: IDocumentManager | null = null;
 
 export function setDocumentManager(docManager: IDocumentManager | null): void {
   _docManager = docManager;
 }
 
-// Whether live notebook insertion is available (i.e. the document manager was
-// registered). When false, callers should fall back to writing the file via the
-// Contents API.
+// Whether live insertion is available; if not, fall back to the Contents API.
 export function canInsertIntoNotebook(): boolean {
   return _docManager !== null;
 }
@@ -30,12 +26,8 @@ export function openNotebook(path: string): void {
   }
 }
 
-// Append a code cell to the notebook at `path`'s live shared model, then save.
-// Because we write to the shared model rather than the file on disk, the new
-// cell shows up immediately in the notebook (and is persisted on save) — no need
-// to close and reopen. If the notebook is already open we reuse that view; if
-// not, it is opened in the background so focus stays on the workflow composer.
-// The notebook must already exist on disk.
+// Append a code cell to the live shared model at `path`, then save, so it shows
+// up without a reopen. Opens the notebook in the background if needed.
 export async function appendCodeCell(
   path: string,
   source: string,

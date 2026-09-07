@@ -119,9 +119,7 @@ describe('Workflow (shared model)', () => {
       { node_id: 'a', name: 'threshold', value: '42', type: 'int' as const }
     ];
     const wf = new Workflow();
-    // A chart that already carries its version stamp, i.e. anything that has
-    // been through migrateChart once. Without the stamp the migrations reset
-    // properties.params (see chartMigrations) before this layer is reached.
+    // Already version-stamped; without it migrations reset properties.params.
     wf.setChart({
       ...chartWith(['a']),
       properties: { params },

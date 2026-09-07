@@ -1,18 +1,12 @@
-// Matching logic for promoting a draft node to its containerized catalogue
-// cell. There is no hard provenance link between a draft and the cell the
-// containerizer eventually produces (the notebook cell only carries a
-// `draft_node: true` flag), so the match is made on the title: the owner
-// suffix the containerizer appends is stripped off (using the cell's own
-// `owner`) and the remainder must equal the draft title exactly. The
-// inputs/outputs must also agree for the swap to keep the chart's links intact
-// (ports are keyed by variable name, see cellToChartNode in utils/chart.ts).
+// Promoting a draft node to its containerized cell. No provenance link exists,
+// so drafts are matched on title (owner suffix stripped) and the I/O must agree
+// for the swap to keep the chart's links.
 
 import { ICell } from '../naavre-common/types/NaaVRECatalogue/WorkflowCells';
 
 /**
- * Normalize a title for comparison. The containerizer slugifies the notebook
- * cell's title (e.g. "Load raster" -> "load-raster"), so compare
- * case-insensitively with non-alphanumeric runs collapsed to a dash.
+ * Normalize a title for comparison: the containerizer slugifies titles
+ * ("Load raster" -> "load-raster"), so lowercase and dash non-alphanumerics.
  */
 export function normalizeTitle(title: string): string {
   return title
@@ -22,12 +16,8 @@ export function normalizeTitle(title: string): string {
 }
 
 /**
- * The base title of a catalogue cell, with the owner suffix removed. The
- * containerizer appends the owner's identifier to the title (a draft
- * "altitude-sensor-data" owned by "test-user-2" becomes
- * "altitude-sensor-data-test-user-2"), and that identifier is the cell's
- * `owner`, so strip exactly that suffix — mirroring how the node title is
- * displayed in NodeCustom.tsx. Cells with no owner suffix are left unchanged.
+ * A cell's title with the owner suffix removed: the containerizer appends the
+ * cell's `owner` ("foo" owned by "user-2" -> "foo-user-2"), so strip that.
  */
 export function baseCellTitle(cell: ICell): string {
   const title = normalizeTitle(cell.title);
@@ -39,9 +29,7 @@ export function baseCellTitle(cell: ICell): string {
 }
 
 /**
- * Whether a catalogue cell matches a draft by title, once the owner suffix is
- * stripped. An exact (normalized) equality — no prefix heuristic is needed,
- * because the suffix is removed precisely using the cell's own owner.
+ * Whether a cell matches a draft by title once the owner suffix is stripped.
  */
 export function titleMatches(draft: ICell, cell: ICell): boolean {
   const wanted = normalizeTitle(draft.title);
@@ -72,9 +60,8 @@ function diffNames(
 }
 
 /**
- * Compare the input/output names of a draft and a containerized cell. Names
- * are what the chart's ports (and therefore links) are keyed on, so they must
- * agree exactly for a replace-in-place to preserve the wiring.
+ * Compare I/O names of a draft and a cell. Ports are keyed on them, so they
+ * must agree exactly for a replace-in-place to preserve the wiring.
  */
 export function diffCellIO(draft: ICell, cell: ICell): IIODiff {
   const [missingInputs, extraInputs] = diffNames(draft.inputs, cell.inputs);
@@ -91,10 +78,7 @@ export function ioMatches(diff: IIODiff): boolean {
   );
 }
 
-/**
- * Human-readable lines describing an I/O mismatch, for the error shown to the
- * user.
- */
+/** Human-readable lines describing an I/O mismatch, for the user's error. */
 export function describeIODiff(diff: IIODiff): string[] {
   const lines: string[] = [];
   if (diff.missingInputs.length > 0) {
@@ -126,14 +110,8 @@ export type PromotionMatch =
   | { status: 'io-mismatch'; cell: ICell; diff: IIODiff };
 
 /**
- * Find the containerized catalogue cell that matches a draft node.
- *
- * Candidates are catalogue cells that have a container image and whose title
- * (owner suffix stripped) matches the draft's exactly. Re-containerizing a cell
- * replaces the previous version in the catalogue, so at most one such cell is
- * expected; if its inputs/outputs also match, it is the result. Otherwise the
- * title match is reported together with the difference so the user can fix
- * either side.
+ * Find the containerized cell matching a draft: has an image, and its stripped
+ * title matches exactly. Mismatched I/O is reported rather than applied.
  */
 export function findContainerizedCell(
   cells: ICell[],

@@ -36,13 +36,8 @@ export interface INode extends INodeRFC<INodeProps> {}
 export interface IChart extends IChartRFC<IChartProps, INodeProps> {}
 
 /**
- * Apply one collection's local changes on top of the shared one.
- *
- * `base` is what this client last took from the shared document, `local` is
- * what it holds now, and `remote` is where the shared document has got to.
- * Entries the local user added or edited are applied on top of `remote`;
- * entries they removed are removed from it. An entry missing from `local` that
- * `base` never held belongs to another client and is left alone.
+ * Apply local changes on top of the shared collection: `base` is what this
+ * client last took, `local` what it holds now, `remote` where the document is.
  */
 function mergeCollection<T>(
   base: Record<string, T>,
@@ -64,12 +59,8 @@ function mergeCollection<T>(
 }
 
 /**
- * Merge a client's local chart content into the shared content, sending what
- * that client changed rather than everything it happens to hold.
- *
- * Writing a whole snapshot instead loses data: setChart (src/model.ts) deletes
- * keys the snapshot does not mention, so a node a collaborator added while a
- * local edit was pending would be deleted by the next flush, on every client.
+ * Merge local chart content into the shared content, sending only what changed:
+ * setChart deletes unmentioned keys, so a snapshot would drop remote additions.
  */
 export function mergeChartChanges(
   base: ChartContent,
@@ -203,11 +194,8 @@ export function setChartParam(chart: IChart, chartParam: IChartParam): IChart {
   };
 }
 
-// Add a cell as a new node to the chart. Used when a node is created
-// programmatically (e.g. a draft node from a dialog) rather than dropped from
-// the sidebar. The node is positioned near the top-left of the currently
-// visible canvas, with a small per-node offset so successive nodes don't fully
-// overlap, and is selected so the element editor opens for it.
+// Add a cell as a new node, for nodes created programmatically rather than
+// dropped. Placed top-left of the visible canvas, offset slightly, selected.
 export function addCellNodeToChart(
   chart: IChart,
   cell: ICell | ISpecialCell
@@ -228,10 +216,8 @@ export function addCellNodeToChart(
   };
 }
 
-// Replace the cell backing an existing node (e.g. after editing a draft node's
-// inputs/outputs). Ports are recomputed from the new cell while the node keeps
-// its id and position. Any link referencing a port that no longer exists on
-// this node is dropped.
+// Replace the cell backing a node, keeping its id and position. Ports are
+// recomputed, and links to ports that no longer exist are dropped.
 export function updateChartNodeCell(
   chart: IChart,
   nodeId: string,

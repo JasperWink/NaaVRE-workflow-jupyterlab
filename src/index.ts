@@ -75,9 +75,7 @@ const extension: JupyterFrontEndPlugin<void> = {
     // insert cells into a notebook's live shared model (see AddToNotebookDialog).
     setDocumentManager(docManager);
 
-    // Make the command registry available to the composer so draft nodes can
-    // put cards on the NaaVRE task board, if that extension is installed
-    // (see src/boardAccess.ts).
+    // Lets draft nodes reach the task board, if installed (src/boardAccess.ts).
     setCommandRegistry(app.commands);
 
     if (launcher) {
@@ -180,11 +178,8 @@ const extension: JupyterFrontEndPlugin<void> = {
       toolbarFactory: toolbarFactory
     });
 
-    // Enable real-time collaboration for .naavrewf when the jupyter-collaboration
-    // content provider is available. The key ('naavrewfdoc') is the document's
-    // content type and must match the model factory (src/factory.ts) and the
-    // server-side YDoc entry point (pyproject.toml). Without the contentProviderId
-    // the document opens as an independent, single-user copy and never syncs.
+    // RTC for .naavrewf. 'naavrewfdoc' must match src/factory.ts and the YDoc
+    // entry point in pyproject.toml, or the document opens single-user.
     if (contentProvider) {
       contentProvider.sharedModelFactory.registerDocumentFactory(
         'naavrewfdoc' as any,

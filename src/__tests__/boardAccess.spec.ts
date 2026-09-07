@@ -8,10 +8,8 @@ import {
 } from '../boardAccess';
 
 /**
- * A command registry standing in for the application's, with the task board
- * extension's `add-task` command registered on it. Uses the real
- * CommandRegistry rather than a mock, so these tests exercise the same
- * lookup-and-execute path the application takes.
+ * Stand-in for the application's registry, with the board's `add-task` on it.
+ * Real CommandRegistry, so the lookup-and-execute path is the production one.
  */
 function registryWithBoard(
   execute: (args: any) => unknown = () => undefined

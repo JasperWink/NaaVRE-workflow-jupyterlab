@@ -1,20 +1,7 @@
 #!/usr/bin/env bash
 #
-# Start the backing services and JupyterLab with the workflow extension.
-#
-#   ./run.sh                 Services up, build, then launch JupyterLab.
-#   ./run.sh --watch         ... and rebuild on source changes.
-#   ./run.sh --no-build      Skip the build.
-#   ./run.sh --no-docker     Leave the backing services alone.
-#   ./run.sh --down          Stop the backing services and exit.
-#   ./run.sh --setup         Install and build, then exit without launching.
-#   ./run.sh --venv PATH     Use that environment instead of ./venv.
-#   ./run.sh --port N        Serve on this port (default 8888).
-#
-# Standalone by default. This repo owns dev/docker-compose.yaml, so it is also
-# the script that brings the catalogue / workflow / containerizer services up —
-# the top-level NaaVRE-implementation/run.sh delegates that here rather than
-# duplicating it.
+# Start the backing services and JupyterLab with the workflow extension; see
+# --help. This repo owns dev/docker-compose.yaml, so it brings the services up.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -125,22 +112,31 @@ fi
 [ -f .yarnrc.yml ] || echo "nodeLinker: node-modules" > .yarnrc.yml
 rm -f .pnp.cjs .pnp.loader.mjs
 
+# jupyter-collaboration >= 4.4.2, which carries the fix for GHSA-8w8w-78q2-76qw,
+# requires Python 3.10+. Override with e.g. PYTHON=python3.12 ./run.sh.
+PYTHON="${PYTHON:-python3}"
+
 if [ ! -d "$VENV" ]; then
+  if ! "$PYTHON" -c 'import sys; sys.exit(sys.version_info < (3, 10))'; then
+    echo "$PYTHON is $("$PYTHON" -V 2>&1); jupyter-collaboration needs 3.10+." >&2
+    echo "Re-run as: PYTHON=python3.12 $0 $*" >&2
+    exit 1
+  fi
   say "Creating $VENV (this takes a few minutes)"
-  python3 -m venv "$VENV"
+  "$PYTHON" -m venv "$VENV"
   "$VENV/bin/python" -m pip install --upgrade pip wheel
   "$VENV/bin/python" -m pip install 'jupyterlab>=4.0.0,<5'
 fi
 
 export PATH="$VENV/bin:$PATH"
 
-# Install, and re-install whenever the packaging metadata changes. Entry points
-# and dependencies are registered at *install* time, not at build time, so after
-# a `git pull` that touches pyproject.toml a plain rebuild would leave this
-# environment on the old ones. That matters most for the jupyter_ydoc entry
-# point: if its name no longer matches the document's content type, the
-# collaboration server silently falls back to a generic YFile and the board
-# stops syncing while still looking fine.
+# `labextension develop` symlinks the venv's labextension path at this repo, so
+# a later `pip install -e` writes its install.json shared-data into the source
+# tree; hatchling then sees that path twice and refuses to build the wheel.
+rm -f NaaVRE_workflow_jupyterlab/labextension/install.json
+
+# Re-install whenever pyproject.toml changes: entry points and deps register at
+# install time, and a stale jupyter_ydoc entry point breaks syncing silently.
 STAMP="$VENV/.NaaVRE_workflow_jupyterlab-pyproject.sha256"
 PYPROJECT_SHA=$("$VENV/bin/python" -c \
   "import hashlib;print(hashlib.sha256(open('pyproject.toml','rb').read()).hexdigest())")
@@ -154,27 +150,24 @@ elif [ "$(cat "$STAMP" 2>/dev/null)" != "$PYPROJECT_SHA" ]; then
   echo "$PYPROJECT_SHA" > "$STAMP"
 fi
 
-# Always (re)link the labextension, deliberately NOT guarded by the install
-# check above: `pip install -e` COPIES the built labextension into the
-# environment, so a venv that already has the package keeps serving whatever
-# was built at install time and every later rebuild is invisible in the
-# browser. `develop --overwrite` replaces that copy with a symlink to this
-# repo's build output. It is idempotent and cheap.
+# Unguarded on purpose: `pip install -e` COPIES the labextension, so later
+# rebuilds stay invisible until this replaces the copy with a symlink.
 "$VENV/bin/jupyter" labextension develop . --overwrite > /dev/null
 
-[ -d node_modules ] || { say "Installing node dependencies"; jlpm install; }
+# Re-install when package.json changes too, not just when node_modules is
+# missing: a dependency bump would otherwise build against the old resolution.
+PKG_SHA=$("$VENV/bin/python" -c \
+  "import hashlib;print(hashlib.sha256(open('package.json','rb').read()).hexdigest())")
+PKG_STAMP="node_modules/.package-json.sha256"
+if [ ! -d node_modules ] || [ "$(cat "$PKG_STAMP" 2>/dev/null)" != "$PKG_SHA" ]; then
+  say "Installing node dependencies"
+  jlpm install
+  echo "$PKG_SHA" > "$PKG_STAMP"
+fi
 
-# Point the extensions at the local services.
-#
-# Merged into the live file, never copied over it. That file is shared by every
-# extension in this environment, and it holds settings this repo does not
-# manage — the containerizer's service URLs, for one. Overwriting it silently
-# reverts those to their defaults, which are relative paths like
-# "/NaaVRE-containerizer-service"; the communicator then sees an empty domain
-# and rejects every call with "Domain is not allowed".
-#
-# dev/overrides.local.json is the local-only overlay (same convention as
-# dev/docker-compose.local.yaml) for services outside this repo.
+# Point the extensions at the local services. Merged, never copied over: the
+# file is shared, and clobbering the containerizer's URLs breaks it silently.
+# dev/overrides.local.json is the local-only overlay for other repos' services.
 mkdir -p "$VENV/share/jupyter/lab/settings"
 "$VENV/bin/python" - "$VENV/share/jupyter/lab/settings/overrides.json" \
   "$DEV/overrides.json" "$DEV/overrides.local.json" <<'MERGE'
@@ -230,17 +223,12 @@ export NAAVRE_ALLOWED_DOMAINS="localhost:62438,localhost:8000,localhost:41918"
 say "Extensions in this environment:"
 jupyter labextension list 2>&1 | grep -E "naavre|collaboration" | sed 's/^/    /' || true
 
-# Keep the Yjs update store beside this repo rather than wherever the shell
-# happened to be: jupyter-collaboration defaults it to '.jupyter_ystore.db' in
-# the *current directory*, which otherwise litters whichever folder you ran from.
-# Binding beyond 127.0.0.1 exposes a Jupyter server, which can run arbitrary
-# code on this machine as whoever started it. The dev stack behind it is also
-# unauthenticated by design (DISABLE_AUTH on every service, an admin/admin
-# catalogue, a never-expiring fake OAuth token in dev/jupyterlab.env), so do
-# this only on a network you trust, keep the login token, and restrict the port
-# with the firewall or security group. The backing services stay bound to the
-# VM's own localhost either way — the browser never talks to them directly, the
-# communicator proxies every call server-side.
+# --SQLiteYStore.db_path keeps the Yjs store here instead of the caller's cwd.
+#
+# Binding beyond 127.0.0.1 exposes a Jupyter server that runs arbitrary code as
+# you, in front of a dev stack that is unauthenticated by design (DISABLE_AUTH,
+# admin/admin, a fake token in dev/jupyterlab.env). Trusted networks only: keep
+# the token and firewall the port.
 EXTRA=()
 if [ "$HOST" != "127.0.0.1" ] && [ "$HOST" != "localhost" ]; then
   warn "Binding to $HOST — reachable from other machines. Keep the token and firewall the port."

@@ -52,10 +52,7 @@ function NodeEditor({
   const cell = node.properties.cell as ICell;
   const isDraft = node.type === DRAFT_CELL_TYPE;
 
-  // Put the draft on the task board as a plain card, so the work it stands for
-  // can be planned there. The card is a copy of the node's title and
-  // description: the two are not linked afterwards, so editing (or replacing,
-  // or deleting) the node leaves the card alone.
+  // Copies the title/description onto a board card; the two stay unlinked.
   const addDraftToTaskBoard = async () => {
     setAddingToBoard(true);
     try {
@@ -79,10 +76,8 @@ function NodeEditor({
     }
   };
 
-  // Swap the draft for its containerized catalogue cell, matched by title.
-  // The replace is only applied when the inputs/outputs agree, so the node
-  // keeps its links (ports are keyed by variable name); otherwise the exact
-  // difference is reported and nothing changes.
+  // Swap the draft for its catalogue cell, only if the I/O agrees so the
+  // node keeps its links.
   const replaceWithContainerizedCell = async () => {
     setReplacing(true);
     try {
