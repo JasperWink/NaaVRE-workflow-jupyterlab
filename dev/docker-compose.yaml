@@ -50,10 +50,6 @@ services:
     image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     command: ["server", "/data", "--console-address", ":9001"]
     ports:
-      # 9000 is the S3 API, 9001 the console. Other services reach the API in
-      # network as catalogue-s3:9000 and do not need this, but MINIO_SERVER_URL
-      # in catalogue-s3.env advertises http://localhost:9000, so the console's
-      # download links only resolve while 9000 is published on the host too.
       - "127.0.0.1:9000:9000"
       - "127.0.0.1:9001:9001"
     env_file:
