@@ -15,10 +15,16 @@ import Select from '@mui/material/Select';
 import Snackbar from '@mui/material/Snackbar';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
-import { ICell } from '../../naavre-common/types/NaaVRECatalogue/WorkflowCells';
+import {
+  IBaseVariable,
+  ICell,
+  VariableType
+} from '../../naavre-common/types/NaaVRECatalogue/WorkflowCells';
 import { requestAPI } from '../../naavre-common/handler';
 import {
   appendCodeCell,
@@ -55,7 +61,55 @@ interface IContentsResponse {
   content: INotebookContent | IContentsItem[];
 }
 
-function generateCellSource(cell: ICell): string {
+// The containerizer recognises R cells by `kernel === 'irkernel'`.
+type CellLanguage = 'python' | 'r';
+
+function defaultLanguage(cell: ICell): CellLanguage {
+  return cell.kernel?.toLowerCase() === 'irkernel' ? 'r' : 'python';
+}
+
+// Type names in the cell header are the containerizer's, not the catalogue's.
+const HEADER_TYPES: Record<VariableType, string> = {
+  int: 'Integer',
+  float: 'Float',
+  str: 'String',
+  list: 'List'
+};
+
+// A bare name is valid: it leaves the type to fill in when containerizing.
+function headerVars(vars: Array<IBaseVariable>): string[] {
+  return vars.map(v =>
+    v.type ? `- ${v.name}: ${HEADER_TYPES[v.type]}` : `- ${v.name}`
+  );
+}
+
+// R has no `assert`; `stopifnot()` with a named expression (R >= 4.0) is the
+// closest. It has no separate float type either: both are numeric.
+const R_TYPES: Record<VariableType, { predicate: string; label: string }> = {
+  int: { predicate: 'is.numeric', label: 'numeric' },
+  float: { predicate: 'is.numeric', label: 'numeric' },
+  str: { predicate: 'is.character', label: 'character' },
+  list: { predicate: 'is.list', label: 'list' }
+};
+
+// The containerizer serializes whatever name the header declares, so a typo or
+// wrong type only fails at workflow runtime. Inputs get no check: they come
+// from upstream cells, which may not exist yet.
+function outputCheck(v: IBaseVariable, language: CellLanguage): string {
+  if (language === 'r') {
+    const t = v.type ? R_TYPES[v.type] : null;
+    return t
+      ? `stopifnot("Output '${v.name}' must be ${t.label}" = ${t.predicate}(${v.name}))`
+      : `# ${v.name}: type unspecified`;
+  }
+  const t = v.type || 'object';
+  return `assert isinstance(${v.name}, ${t}), "Output '${v.name}' must be of type ${t}"`;
+}
+
+// The YAML header declares the interface, overriding the code analysis that
+// would otherwise need a producer and a consumer cell for every variable.
+// https://naavre.net/docs/NaaVRE_documentation/component-containerizer/
+function generateCellSource(cell: ICell, language: CellLanguage): string {
   const lines: string[] = [];
 
   lines.push(`# ${cell.title}`);
@@ -66,29 +120,32 @@ function generateCellSource(cell: ICell): string {
     }
   }
 
-  if (cell.inputs.length > 0) {
-    lines.push('');
-    lines.push('# Input:');
-    for (const v of cell.inputs) {
-      const t = v.type || 'object';
-      lines.push(
-        `assert isinstance(${v.name}, ${t}), "Input '${v.name}' must be of type ${t}"`
-      );
+  // Indentation is relative to the '# ' prefix, which is stripped per line.
+  const doc: string[] = ['NaaVRE:', '  cell:'];
+  for (const [key, vars] of [
+    ['inputs', cell.inputs],
+    ['outputs', cell.outputs]
+  ] as const) {
+    if (vars.length === 0) {
+      doc.push(`    ${key}: []`);
+    } else {
+      doc.push(`    ${key}:`);
+      doc.push(...headerVars(vars).map(line => `      ${line}`));
     }
   }
+  lines.push('# ---');
+  lines.push(...doc.map(line => `# ${line}`));
+  lines.push('# ...');
 
   lines.push('');
   lines.push('# Cell implementation:');
-  lines.push('...');
+  lines.push('# TODO');
 
   if (cell.outputs.length > 0) {
     lines.push('');
     lines.push('# Output:');
     for (const v of cell.outputs) {
-      const t = v.type || 'object';
-      lines.push(
-        `assert isinstance(${v.name}, ${t}), "Output '${v.name}' must be of type ${t}"`
-      );
+      lines.push(outputCheck(v, language));
     }
   }
 
@@ -108,10 +165,11 @@ function makeNotebookCell(source: string): INotebookCell {
   };
 }
 
-const EMPTY_NOTEBOOK: INotebookContent = {
-  nbformat: 4,
-  nbformat_minor: 5,
-  metadata: {
+const KERNELSPECS: Record<
+  CellLanguage,
+  { kernelspec: Record<string, string>; language_info: Record<string, string> }
+> = {
+  python: {
     kernelspec: {
       display_name: 'Python 3',
       language: 'python',
@@ -119,8 +177,20 @@ const EMPTY_NOTEBOOK: INotebookContent = {
     },
     language_info: { name: 'python', version: '3.9.0' }
   },
-  cells: []
+  r: {
+    kernelspec: { display_name: 'R', language: 'R', name: 'ir' },
+    language_info: { name: 'R' }
+  }
 };
+
+function emptyNotebook(language: CellLanguage): INotebookContent {
+  return {
+    nbformat: 4,
+    nbformat_minor: 5,
+    metadata: { ...KERNELSPECS[language] },
+    cells: []
+  };
+}
 
 async function writeNotebook(
   path: string,
@@ -197,7 +267,9 @@ export function AddToNotebookDialog({
     message: ''
   });
 
-  const cellSource = generateCellSource(cell);
+  const [language, setLanguage] = useState<CellLanguage>(defaultLanguage(cell));
+
+  const cellSource = generateCellSource(cell, language);
 
   const fetchNotebooks = async () => {
     setLoadingList(true);
@@ -225,6 +297,7 @@ export function AddToNotebookDialog({
     if (open) {
       setSelectedPath('');
       setNewName('');
+      setLanguage(defaultLanguage(cell));
       fetchNotebooks();
     }
   }, [open]);
@@ -280,7 +353,7 @@ export function AddToNotebookDialog({
       // A brand-new notebook has no open widget, so writing the cell straight to
       // the file is safe; then reveal it so the user sees the result.
       await writeNotebook(path, {
-        ...EMPTY_NOTEBOOK,
+        ...emptyNotebook(language),
         cells: [makeNotebookCell(cellSource)]
       });
       if (canInsertIntoNotebook()) {
@@ -305,7 +378,26 @@ export function AddToNotebookDialog({
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Add to notebook</DialogTitle>
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 2
+          }}
+        >
+          Add to notebook
+          <ToggleButtonGroup
+            size="small"
+            exclusive
+            value={language}
+            onChange={(_, v: CellLanguage | null) => v && setLanguage(v)}
+            aria-label="Cell language"
+          >
+            <ToggleButton value="python">Python</ToggleButton>
+            <ToggleButton value="r">R</ToggleButton>
+          </ToggleButtonGroup>
+        </DialogTitle>
         <DialogContent>
           {/* ── Existing notebooks ── */}
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
