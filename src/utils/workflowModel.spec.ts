@@ -222,4 +222,48 @@ describe('Workflow (shared model)', () => {
       expect(chart.nodes['b'].position).toEqual({ x: 200, y: 200 });
     }
   });
+
+  // The room decides whether the file on disk is stale by comparing it byte for
+  // byte to a fresh serialization of the document. Y.Map iteration is hash
+  // order, so without an explicit sort the same content serializes differently
+  // depending on how the document was built, and that check fails every time.
+  describe('getSource is byte-stable', () => {
+    it('does not depend on the order the nodes were written in', () => {
+      const ids = ['n9', 'n2', 'n7', 'n0', 'n5', 'n3'];
+      const forwards = new Workflow();
+      forwards.setChart(chartWith(ids));
+      const backwards = new Workflow();
+      backwards.setChart(chartWith([...ids].reverse()));
+
+      expect(backwards.getSource()).toEqual(forwards.getSource());
+    });
+
+    it('survives rebuilding the document from its updates', () => {
+      const original = new Workflow();
+      original.setChart(chartWith(['n9', 'n2', 'n7', 'n0']));
+      const saved = original.getSource();
+
+      // A node added after the initial write, as a live edit would arrive.
+      const grown = original.getChart();
+      grown.nodes['n4'] = chartWith(['n4']).nodes['n4'];
+      original.setChart(grown);
+
+      const rebuilt = new Workflow();
+      Y.applyUpdate(rebuilt.ydoc, Y.encodeStateAsUpdate(original.ydoc));
+
+      expect(rebuilt.getSource()).toEqual(original.getSource());
+      expect(original.getSource()).not.toEqual(saved); // the node did land
+    });
+
+    it('emits node keys in sorted order', () => {
+      const wf = new Workflow();
+      wf.setChart(chartWith(['n9', 'n2', 'n7']));
+
+      expect(Object.keys(JSON.parse(wf.getSource()).chart.nodes)).toEqual([
+        'n2',
+        'n7',
+        'n9'
+      ]);
+    });
+  });
 });
