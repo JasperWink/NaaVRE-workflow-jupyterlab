@@ -136,17 +136,9 @@ export class ExperimentManagerWidget extends ReactWidget {
   }
 
   /**
-   * Bring the loaded chart up to the current version, once.
-   *
-   * `Workflow.setSource` migrates on load, but with collaboration enabled this
-   * client never calls it: the server reads the file into the shared document
-   * and the client only ever sees the synced result. Running the migrations
-   * here covers both modes and keeps `utils/chartMigrations` the only place
-   * they are written.
-   *
-   * Safe to race: the migrations are idempotent and `setChart` writes only the
-   * keys that changed, so two clients opening an old document at the same
-   * moment converge on the same content.
+   * Bring the loaded chart up to the current version, once. `setSource` never
+   * runs under collaboration - the server loads the file - so migrating here
+   * covers both modes. Idempotent, so two clients racing still converge.
    */
   private _migrateChartIfNeeded(): void {
     const chart = this._model.chart;
@@ -169,13 +161,9 @@ export class ExperimentManagerWidget extends ReactWidget {
   }
 
   /**
-   * Push local edits into the shared model, debounced so drags coalesce.
-   *
-   * The chart is read at flush time rather than taken from the argument the
-   * composer reported with. A remote change landing inside the debounce window
-   * repaints the composer through `_onContentChanged`, which also moves `_base`
-   * forward; flushing the pre-repaint snapshot against that newer base would
-   * make the collaborator's addition look locally deleted and remove it.
+   * Push local edits into the shared model, debounced so drags coalesce. Read
+   * at flush time, not from the reported argument: a repaint inside the window
+   * moves `_base` on, and a stale snapshot would read as a deletion.
    */
   private _onComposerChartChange = lodash.debounce((): void => {
     this._syncDocumentToModel(this.composerRef.current?.state.chart);

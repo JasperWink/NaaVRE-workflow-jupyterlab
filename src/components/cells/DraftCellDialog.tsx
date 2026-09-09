@@ -33,6 +33,8 @@ interface IVariable {
 
 const DEFAULT_TYPE: VariableType = 'str';
 
+// Every variable the dialog produces is typed; an untyped one loaded from
+// elsewhere picks up the default rather than offering a blank option.
 function toVariables(
   vars: Array<{ name: string; type: VariableType | null }> | undefined
 ): IVariable[] {
@@ -164,14 +166,8 @@ export function DraftCellDialog({
     onSave({
       title: title.trim(),
       description: description.trim(),
-      inputs: inputs.map(v => ({
-        name: v.name.trim(),
-        type: v.type || null
-      })),
-      outputs: outputs.map(v => ({
-        name: v.name.trim(),
-        type: v.type || null
-      })),
+      inputs: inputs.map(v => ({ name: v.name.trim(), type: v.type })),
+      outputs: outputs.map(v => ({ name: v.name.trim(), type: v.type })),
       url: initialCell?.url
     });
   };

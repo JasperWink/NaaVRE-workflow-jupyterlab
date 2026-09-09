@@ -12,6 +12,12 @@ export interface ISpecialCell extends ICell {
 // composer before a containerized cell exists. Not backed by the catalogue.
 export const DRAFT_CELL_TYPE = 'draft-cell';
 
+// Splitter and merger render as fixed-size nodes with a single dot per side.
+// Workflow cells and drafts carry user-defined I/O and render as cells.
+export function isSpecialNodeType(type: string | undefined): boolean {
+  return type !== 'workflow-cell' && type !== DRAFT_CELL_TYPE;
+}
+
 export interface IDraftCellInit {
   title: string;
   description?: string;

@@ -8,7 +8,7 @@ import { ICell } from '../../naavre-common/types/NaaVRECatalogue/WorkflowCells';
 import Stack from '@mui/material/Stack';
 import { Typography } from '@mui/material';
 import { TooltipOverflowLabel } from '../common/TooltipOverflowLabel';
-import { DRAFT_CELL_TYPE } from '../../utils/specialCells';
+import { isSpecialNodeType } from '../../utils/specialCells';
 import { INode } from '../../utils/chart';
 import { ICollaborator, readableTextColor } from '../../utils/presence';
 import { NodePresenceContext } from './NodePresenceContext';
@@ -179,49 +179,6 @@ function getNodeHeight(node: INode) {
   return `${heightPx}px`;
 }
 
-function NodeCustomElement(
-  { node, children, ...otherProps }: INodeDefaultProps & { node: INode },
-  ref: ForwardedRef<HTMLDivElement>,
-  collaborators: Array<ICollaborator>
-) {
-  // Drafts carry user-defined I/O, so they render as cells rather than as
-  // the fixed-size special nodes.
-  const isDraftCell = node.type === DRAFT_CELL_TYPE;
-  const isSpecialNode = node.type !== 'workflow-cell' && !isDraftCell;
-
-  getNodeHeight(node);
-  const width = isSpecialNode ? '200px' : '250px';
-  const height = getNodeHeight(node);
-  // With several collaborators on one node, the first one's colour carries the
-  // outline; the flags name all of them.
-  const presenceColor = collaborators[0]?.color;
-
-  return (
-    <NodeContainer
-      width={width}
-      height={height}
-      isDraft={node.properties.cell.is_draft}
-      presenceColor={presenceColor}
-      ref={ref}
-      {...otherProps}
-    >
-      <NodeTitle
-        cell={node.properties.cell}
-        collaborators={collaborators}
-        isSpecialNode={isSpecialNode}
-        backgroundColor={
-          isSpecialNode
-            ? 'rgb(195, 235, 202)'
-            : node.properties.cell.is_draft
-              ? 'rgb(240,240,240)'
-              : 'rgb(229,252,233)'
-        }
-      />
-      {children}
-    </NodeContainer>
-  );
-}
-
 export const NodeCustom = React.forwardRef(
   (
     { node, children, ...otherProps }: INodeDefaultProps & { node: INode },
@@ -229,10 +186,36 @@ export const NodeCustom = React.forwardRef(
   ) => {
     // Via context, not props: a new component type remounts every node.
     const presence = useContext(NodePresenceContext);
-    return NodeCustomElement(
-      { node, children, ...otherProps },
-      ref,
-      presence[node.id] ?? []
+    const collaborators = presence[node.id] ?? [];
+
+    const isSpecialNode = isSpecialNodeType(node.type);
+    // With several collaborators on one node, the first one's colour carries
+    // the outline; the flags name all of them.
+    const presenceColor = collaborators[0]?.color;
+
+    return (
+      <NodeContainer
+        width={isSpecialNode ? '200px' : '250px'}
+        height={getNodeHeight(node)}
+        isDraft={node.properties.cell.is_draft}
+        presenceColor={presenceColor}
+        ref={ref}
+        {...otherProps}
+      >
+        <NodeTitle
+          cell={node.properties.cell}
+          collaborators={collaborators}
+          isSpecialNode={isSpecialNode}
+          backgroundColor={
+            isSpecialNode
+              ? 'rgb(195, 235, 202)'
+              : node.properties.cell.is_draft
+                ? 'rgb(240,240,240)'
+                : 'rgb(229,252,233)'
+          }
+        />
+        {children}
+      </NodeContainer>
     );
   }
 );

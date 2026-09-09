@@ -12,7 +12,7 @@ import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import { REACT_FLOW_CHART } from '@mrblenny/react-flow-chart';
 
 import { ICell } from '../../naavre-common/types/NaaVRECatalogue/WorkflowCells';
-import { ISpecialCell } from '../../utils/specialCells';
+import { ISpecialCell, isSpecialNodeType } from '../../utils/specialCells';
 import { cellToChartNode } from '../../utils/chart';
 import Box from '@mui/material/Box';
 import { CellShareDialog } from './CellShareDialog';
@@ -79,7 +79,7 @@ export function CellNode({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const node = cellToChartNode(cell);
-  const isSpecialNode = node.type !== 'workflow-cell';
+  const isSpecialNode = isSpecialNodeType(node.type);
 
   const userinfo = useContext(UserInfoContext);
   const userIsOwner = cell.owner === userinfo.preferred_username;

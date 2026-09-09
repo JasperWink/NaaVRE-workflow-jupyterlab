@@ -35,6 +35,12 @@ Start the backing services and JupyterLab with the NaaVRE workflow extension.
 EOF
 }
 
+# Without this, a value-taking flag passed last dies on `set -u` with an
+# unbound-variable message instead of saying what is wrong.
+need_arg() {
+  [ $# -ge 2 ] || { echo "$1 needs a value (try --help)" >&2; exit 1; }
+}
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --watch) WATCH=1 ;;
@@ -42,9 +48,9 @@ while [ $# -gt 0 ]; do
     --no-docker) DOCKER=0 ;;
     --down) DOWN=1 ;;
     --setup) SETUP_ONLY=1 ;;
-    --venv) VENV="$2"; shift ;;
-    --port) PORT="$2"; shift ;;
-    --host) HOST="$2"; shift ;;
+    --venv) need_arg "$@"; VENV="$2"; shift ;;
+    --port) need_arg "$@"; PORT="$2"; shift ;;
+    --host) need_arg "$@"; HOST="$2"; shift ;;
     -h | --help) usage; exit 0 ;;
     *) echo "Unknown option: $1 (try --help)" >&2; exit 1 ;;
   esac
@@ -217,8 +223,9 @@ while IFS= read -r line; do
   export "$line"
 done < "$DEV/jupyterlab.env"
 # The containerizer service only exists in the local compose overlay, so its
-# host is not in the committed jupyterlab.env.
-export NAAVRE_ALLOWED_DOMAINS="localhost:62438,localhost:8000,localhost:41918"
+# host is not in the committed jupyterlab.env. Appended, not restated: editing
+# the env file has to keep working.
+export NAAVRE_ALLOWED_DOMAINS="${NAAVRE_ALLOWED_DOMAINS:+${NAAVRE_ALLOWED_DOMAINS},}localhost:41918"
 
 say "Extensions in this environment:"
 jupyter labextension list 2>&1 | grep -E "naavre|collaboration" | sed 's/^/    /' || true

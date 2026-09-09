@@ -3,11 +3,7 @@ import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import Snackbar from '@mui/material/Snackbar';
-import {
-  IConfig,
-  IFlowChartCallbacks,
-  ILink
-} from '@mrblenny/react-flow-chart';
+import { IConfig, IFlowChartCallbacks } from '@mrblenny/react-flow-chart';
 
 import { ICell } from '../../naavre-common/types/NaaVRECatalogue/WorkflowCells';
 import { DRAFT_CELL_TYPE, makeDraftCell } from '../../utils/specialCells';
@@ -29,18 +25,20 @@ import { CellInfoHeader } from '../common/CellInfoHeader';
 import { AddToNotebookDialog } from '../cells/AddToNotebookDialog';
 import { DraftCellDialog } from '../cells/DraftCellDialog';
 
-function LinkEditor({ link, onClose }: { link: ILink; onClose: () => void }) {
+function LinkEditor({ onClose }: { onClose: () => void }) {
   return <CellInfoHeader onClose={onClose}>Link</CellInfoHeader>;
 }
 
 function NodeEditor({
   node,
   setChart,
-  onClose
+  onClose,
+  onEditingChange
 }: {
   node: INode;
   setChart: SetChart;
   onClose: () => void;
+  onEditingChange: (editing: boolean) => void;
 }) {
   const settings = React.useContext(SettingsContext);
   const [editOpen, setEditOpen] = React.useState(false);
@@ -54,6 +52,13 @@ function NodeEditor({
   }>({ open: false, severity: 'success', message: '' });
   const cell = node.properties.cell as ICell;
   const isDraft = node.type === DRAFT_CELL_TYPE;
+
+  // Advertise a pending change to this node, and clear it when the editor
+  // closes. The dialogs are local state the composer cannot see.
+  React.useEffect(() => {
+    onEditingChange(editOpen || addToNotebookOpen || replacing);
+    return () => onEditingChange(false);
+  }, [editOpen, addToNotebookOpen, replacing, onEditingChange]);
 
   // Copies the title/description onto a board card; the two stay unlinked.
   const addDraftToTaskBoard = async () => {
@@ -79,13 +84,9 @@ function NodeEditor({
     }
   };
 
-  // Swap the draft for its catalogue cell, only if the I/O agrees so the
-  // node keeps its links.
-  //
-  // Every write below goes through the updater form of `setChart`. The
-  // catalogue call takes as long as it takes, and collaborators keep editing
-  // meanwhile; applying the change to the chart captured at render time would
-  // write back a pre-fetch snapshot and delete whatever landed in between.
+  // Swap the draft for its catalogue cell, only if the I/O agrees so the node
+  // keeps its links. The write uses the updater form: collaborators keep
+  // editing during the fetch, and a render-time snapshot would revert them.
   const replaceWithContainerizedCell = async () => {
     setReplacing(true);
     try {
@@ -214,12 +215,14 @@ export function ChartElementEditor({
   chart,
   setChart,
   callbacks,
-  config
+  config,
+  onEditingChange
 }: {
   chart: IChart;
   setChart: SetChart;
   callbacks: IFlowChartCallbacks;
   config: IConfig;
+  onEditingChange: (editing: boolean) => void;
 }) {
   // when no chart element is selected, chart.selected === {}
   if (!chart.selected.id) {
@@ -243,17 +246,13 @@ export function ChartElementEditor({
         overflowY: 'scroll'
       }}
     >
-      {chart.selected.type === 'link' && (
-        <LinkEditor
-          link={chart.links[chart.selected.id as string]}
-          onClose={onClose}
-        />
-      )}
+      {chart.selected.type === 'link' && <LinkEditor onClose={onClose} />}
       {chart.selected.type === 'node' && (
         <NodeEditor
           node={chart.nodes[chart.selected.id as string]}
           setChart={setChart}
           onClose={onClose}
+          onEditingChange={onEditingChange}
         />
       )}
       <div style={{ margin: '15px' }}>

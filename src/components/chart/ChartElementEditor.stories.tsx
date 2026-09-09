@@ -24,6 +24,7 @@ export const Default: Story = {
     ) as typeof actions,
     config: {
       readonly: false
-    }
+    },
+    onEditingChange: editing => console.log('editing', editing)
   }
 };

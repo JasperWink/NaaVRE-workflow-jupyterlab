@@ -200,12 +200,15 @@ function emptyNotebook(language: CellLanguage): INotebookContent {
   };
 }
 
+function encodePath(path: string): string {
+  return path.split('/').map(encodeURIComponent).join('/');
+}
+
 async function writeNotebook(
   path: string,
   notebook: INotebookContent
 ): Promise<void> {
-  const encodedPath = path.split('/').map(encodeURIComponent).join('/');
-  await requestAPI(`api/contents/${encodedPath}`, {
+  await requestAPI(`api/contents/${encodePath(path)}`, {
     method: 'PUT',
     body: JSON.stringify({
       type: 'notebook',
@@ -215,14 +218,11 @@ async function writeNotebook(
   });
 }
 
-function encodePath(path: string): string {
-  return path.split('/').map(encodeURIComponent).join('/');
-}
-
-// Whether a file already exists at `path`.
+// Whether a file already exists at `path`. `content=0` asks for metadata only,
+// so this does not download the whole notebook.
 async function pathExists(path: string): Promise<boolean> {
   try {
-    await requestAPI(`api/contents/${encodePath(path)}`);
+    await requestAPI(`api/contents/${encodePath(path)}?content=0`);
     return true;
   } catch {
     return false;
