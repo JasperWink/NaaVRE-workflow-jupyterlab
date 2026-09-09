@@ -405,19 +405,27 @@ export class Workflow extends YDocument<WorkflowChange> {
   getChart(): IChart {
     const nodes: IChart['nodes'] = {};
     const links: IChart['links'] = {};
-    this._content.forEach((value, key) => {
-      if (key.startsWith(NODE_KEY_PREFIX)) {
-        const node = parseJson(value, null) as INode | null;
-        if (node) {
-          nodes[key.slice(NODE_KEY_PREFIX.length)] = node;
+    // Sorted: Y.Map iteration is hash order, which is neither insertion order
+    // nor stable across a rebuild of the document. `getSource` has to be
+    // byte-identical to what the server writes for the same content — the room
+    // compares the two to decide whether the file is stale — and JSON.stringify
+    // emits keys in insertion order, so the sort has to happen here.
+    Array.from(this._content.keys())
+      .sort()
+      .forEach(key => {
+        const value = this._content.get(key);
+        if (key.startsWith(NODE_KEY_PREFIX)) {
+          const node = parseJson(value, null) as INode | null;
+          if (node) {
+            nodes[key.slice(NODE_KEY_PREFIX.length)] = node;
+          }
+        } else if (key.startsWith(LINK_KEY_PREFIX)) {
+          const link = parseJson(value, null) as ILink | null;
+          if (link) {
+            links[key.slice(LINK_KEY_PREFIX.length)] = link;
+          }
         }
-      } else if (key.startsWith(LINK_KEY_PREFIX)) {
-        const link = parseJson(value, null) as ILink | null;
-        if (link) {
-          links[key.slice(LINK_KEY_PREFIX.length)] = link;
-        }
-      }
-    });
+      });
     const chart: IChart = {
       ...defaultChart,
       nodes,

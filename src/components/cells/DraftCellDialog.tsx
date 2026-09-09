@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -130,14 +130,20 @@ export function DraftCellDialog({
   const [inputs, setInputs] = useState<IVariable[]>([]);
   const [outputs, setOutputs] = useState<IVariable[]>([]);
 
-  // (Re)initialise the form whenever the dialog opens.
+  // (Re)initialise the form on the closed -> open transition only. `initialCell`
+  // has to stay in the dependencies (its value is read here), but reacting to it
+  // is wrong: the chart is re-parsed from JSON on every collaborative sync, so
+  // the cell object gets a new identity whenever *any* node changes, and the
+  // reset would land under the user's typing.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (open) {
+    if (open && !wasOpen.current) {
       setTitle(initialCell?.title || '');
       setDescription(initialCell?.description || '');
       setInputs(toVariables(initialCell?.inputs));
       setOutputs(toVariables(initialCell?.outputs));
     }
+    wasOpen.current = open;
   }, [open, initialCell]);
 
   const isEdit = initialCell !== null;

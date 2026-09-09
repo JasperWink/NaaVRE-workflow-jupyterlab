@@ -51,6 +51,16 @@ def _parse_json(raw: Any, fallback: Any) -> Any:
         return fallback
 
 
+def _dump_json(value: Any) -> str:
+    """``json.dumps`` producing the same bytes as the front-end's ``JSON.stringify``.
+
+    The two sides write the same keys, so a mismatch in separators or in
+    non-ASCII escaping would make every value look changed and rewrite the whole
+    document on load.
+    """
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
 class YWorkflow(YBaseDoc):
     """A :class:`YBaseDoc` for NaaVRE ``.naavrewf`` workflow documents.
 
@@ -80,7 +90,12 @@ class YWorkflow(YBaseDoc):
         nodes = {}
         links = {}
         chart = {**DEFAULT_CHART, "nodes": nodes, "links": links}
-        for key in self._ycontent.keys():
+        # Sorted: ``keys()`` is Y.Map hash order, which is neither insertion
+        # order nor stable across a rebuild of the document from the store. The
+        # room compares this serialization to the file byte for byte to decide
+        # whether the store is stale (jupyter_server_ydoc rooms.py), so an
+        # arbitrary order makes that check fail every time.
+        for key in sorted(self._ycontent.keys()):
             value = self._ycontent.get(key)
             if key.startswith(self._NODE_PREFIX):
                 node = _parse_json(value, None)
@@ -106,7 +121,9 @@ class YWorkflow(YBaseDoc):
         Produces the same ``{"chart": ...}`` JSON the front-end writes, so files
         stay identical whether saved with or without collaboration enabled.
         """
-        return json.dumps({"chart": self._get_chart()}, indent=2)
+        return json.dumps(
+            {"chart": self._get_chart()}, indent=2, ensure_ascii=False
+        )
 
     def set(self, value: str) -> None:
         """Populate the shared document from the on-disk ``.naavrewf`` string.
@@ -123,16 +140,16 @@ class YWorkflow(YBaseDoc):
         nodes = chart.get("nodes")
         if isinstance(nodes, dict):
             for node_id, node in nodes.items():
-                desired[f"{self._NODE_PREFIX}{node_id}"] = json.dumps(node)
+                desired[f"{self._NODE_PREFIX}{node_id}"] = _dump_json(node)
         links = chart.get("links")
         if isinstance(links, dict):
             for link_id, link in links.items():
-                desired[f"{self._LINK_PREFIX}{link_id}"] = json.dumps(link)
-        desired[self._PROPERTIES_KEY] = json.dumps(
+                desired[f"{self._LINK_PREFIX}{link_id}"] = _dump_json(link)
+        desired[self._PROPERTIES_KEY] = _dump_json(
             chart.get("properties", DEFAULT_CHART["properties"])
         )
         if chart.get("metadata") is not None:
-            desired[self._METADATA_KEY] = json.dumps(chart["metadata"])
+            desired[self._METADATA_KEY] = _dump_json(chart["metadata"])
 
         with self._ydoc.transaction():
             for key in list(self._ycontent.keys()):
