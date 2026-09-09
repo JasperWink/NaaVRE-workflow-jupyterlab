@@ -29,7 +29,14 @@ import lodash from 'lodash';
 import { Composer } from './components/Composer';
 import React from 'react';
 import { ISettings, SettingsContext } from './settings';
-import { ChartContent, IChart, mergeChartChanges } from './utils/chart';
+import {
+  ChartContent,
+  IChart,
+  IChartParam,
+  mergeChartChanges,
+  mergeChartParams
+} from './utils/chart';
+import { migrateChart } from './utils/chartMigrations';
 import {
   collectNodePresence,
   INodePresence,
@@ -77,6 +84,15 @@ export class ExperimentManagerWidget extends ReactWidget {
    */
   private _base: ChartContent = { nodes: {}, links: {} };
 
+  /** The chart-level params half of `_base`; merged by the same rule. */
+  private _baseParams: Array<IChartParam> = [];
+
+  /**
+   * Set while this client is writing to the shared model, so the change signal
+   * its own write raises is not treated as news from a collaborator.
+   */
+  private _writing = false;
+
   /**
    * Collaborators by node id, as last handed to the composer, so awareness
    * updates that change nothing drawn cost nothing.
@@ -96,6 +112,10 @@ export class ExperimentManagerWidget extends ReactWidget {
     this._model = context.model;
 
     context.ready.then(value => {
+      // Before the signals are connected and before `_base` is seeded, so the
+      // migration is never mistaken for a local edit.
+      this._migrateChartIfNeeded();
+
       this._model.contentChanged.connect(this._onContentChanged);
       this._model.clientChanged.connect(this._onClientChanged);
 
@@ -115,6 +135,27 @@ export class ExperimentManagerWidget extends ReactWidget {
     this.update();
   }
 
+  /**
+   * Bring the loaded chart up to the current version, once.
+   *
+   * `Workflow.setSource` migrates on load, but with collaboration enabled this
+   * client never calls it: the server reads the file into the shared document
+   * and the client only ever sees the synced result. Running the migrations
+   * here covers both modes and keeps `utils/chartMigrations` the only place
+   * they are written.
+   *
+   * Safe to race: the migrations are idempotent and `setChart` writes only the
+   * keys that changed, so two clients opening an old document at the same
+   * moment converge on the same content.
+   */
+  private _migrateChartIfNeeded(): void {
+    const chart = this._model.chart;
+    const migrated = migrateChart(chart);
+    if (!lodash.isEqual(migrated, chart)) {
+      this._model.chart = migrated;
+    }
+  }
+
   render() {
     return (
       <SettingsContext.Provider value={this.settings}>
@@ -127,9 +168,17 @@ export class ExperimentManagerWidget extends ReactWidget {
     );
   }
 
-  /** Push local edits into the shared model, debounced so drags coalesce. */
-  private _onComposerChartChange = lodash.debounce((chart: IChart): void => {
-    this._syncDocumentToModel(chart);
+  /**
+   * Push local edits into the shared model, debounced so drags coalesce.
+   *
+   * The chart is read at flush time rather than taken from the argument the
+   * composer reported with. A remote change landing inside the debounce window
+   * repaints the composer through `_onContentChanged`, which also moves `_base`
+   * forward; flushing the pre-repaint snapshot against that newer base would
+   * make the collaborator's addition look locally deleted and remove it.
+   */
+  private _onComposerChartChange = lodash.debounce((): void => {
+    this._syncDocumentToModel(this.composerRef.current?.state.chart);
   }, 50);
 
   /**
@@ -173,20 +222,36 @@ export class ExperimentManagerWidget extends ReactWidget {
     }
     const current = this._model.chart;
     const merged = mergeChartChanges(this._base, chart, current);
-    const properties = chart.properties ?? current.properties;
+    // Params get the same treatment as nodes and links rather than a whole
+    // array write, which would drop a collaborator's concurrent param edit.
+    const localParams = chart.properties?.params;
+    const params =
+      localParams === undefined
+        ? current.properties.params
+        : mergeChartParams(
+            this._baseParams,
+            localParams,
+            current.properties.params
+          );
     if (
       !lodash.isEqual(current.nodes, merged.nodes) ||
       !lodash.isEqual(current.links, merged.links) ||
-      !lodash.isEqual(current.properties, properties)
+      !lodash.isEqual(current.properties.params, params)
     ) {
-      this._model.chart = {
-        ...current,
-        nodes: merged.nodes,
-        links: merged.links,
-        properties
-      };
+      this._writing = true;
+      try {
+        this._model.chart = {
+          ...current,
+          nodes: merged.nodes,
+          links: merged.links,
+          properties: { ...current.properties, params }
+        };
+      } finally {
+        this._writing = false;
+      }
     }
     this._base = lodash.cloneDeep(merged);
+    this._baseParams = lodash.cloneDeep(params);
   }
 
   /**
@@ -254,21 +319,45 @@ export class ExperimentManagerWidget extends ReactWidget {
    * to changes on shared model's content.
    */
   private _onContentChanged = (): void => {
+    if (this._writing) {
+      // Our own write. The composer already holds what we just sent, and
+      // `_syncDocumentToModel` moves `_base` on once it returns.
+      return;
+    }
     const shared = this._model.chart;
+    const local = this.composerRef.current?.state.chart ?? null;
+    // Replay this client's un-flushed edits on top of the incoming snapshot,
+    // by the same rule the flush uses. Taking the snapshot wholesale would drop
+    // whatever the user did since the last flush - up to a whole drag, since
+    // the debounce only settles once the drag stops.
+    const content = local
+      ? mergeChartChanges(this._base, local, shared)
+      : { nodes: shared.nodes, links: shared.links };
+    const localParams = local?.properties?.params;
+    const params =
+      localParams === undefined
+        ? shared.properties.params
+        : mergeChartParams(
+            this._baseParams,
+            localParams,
+            shared.properties.params
+          );
     this._base = lodash.cloneDeep({
       nodes: shared.nodes,
       links: shared.links
     });
-    const local = this.composerRef.current?.state.chart ?? null;
+    this._baseParams = lodash.cloneDeep(shared.properties.params);
     this.composerRef.current?.setState({
       chart: {
-        nodes: shared.nodes,
-        links: shared.links,
-        properties: shared.properties,
+        nodes: content.nodes,
+        links: content.links,
+        properties: { ...shared.properties, params },
         offset: local?.offset ?? shared.offset,
         scale: local?.scale ?? shared.scale,
-        selected: this._pruneDeletedRef(local?.selected ?? {}, shared),
-        hovered: this._pruneDeletedRef(local?.hovered ?? {}, shared)
+        // Pruned against what is actually drawn, not against `shared`: a node
+        // this client just added is selectable before it reaches the document.
+        selected: this._pruneDeletedRef(local?.selected ?? {}, content),
+        hovered: this._pruneDeletedRef(local?.hovered ?? {}, content)
       }
     });
   };

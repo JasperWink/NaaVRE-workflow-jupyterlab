@@ -152,11 +152,19 @@ function generateCellSource(cell: ICell, language: CellLanguage): string {
   return lines.join('\n');
 }
 
+// nbformat requires cell ids to be unique within a notebook, and nothing here
+// checks the target's existing ids — a timestamp alone collides for two cells
+// added in the same millisecond.
+function makeCellId(): string {
+  const rand = Math.random().toString(36).slice(2, 10);
+  return `draft-${Date.now().toString(36)}-${rand}`;
+}
+
 function makeNotebookCell(source: string): INotebookCell {
   return {
     cell_type: 'code',
-    id: `draft-${Date.now().toString(36)}`,
-    metadata: { draft_node: true },
+    id: makeCellId(),
+    metadata: { ...DRAFT_CELL_METADATA },
     source: source
       .split('\n')
       .map((l, i, arr) => (i < arr.length - 1 ? l + '\n' : l)),

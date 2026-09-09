@@ -11,7 +11,12 @@ import {
 
 import { ICell } from '../../naavre-common/types/NaaVRECatalogue/WorkflowCells';
 import { DRAFT_CELL_TYPE, makeDraftCell } from '../../utils/specialCells';
-import { IChart, INode, updateChartNodeCell } from '../../utils/chart';
+import {
+  IChart,
+  INode,
+  SetChart,
+  updateChartNodeCell
+} from '../../utils/chart';
 import { fetchListFromCatalogue } from '../../utils/catalog';
 import {
   describeIODiff,
@@ -30,13 +35,11 @@ function LinkEditor({ link, onClose }: { link: ILink; onClose: () => void }) {
 
 function NodeEditor({
   node,
-  chart,
   setChart,
   onClose
 }: {
   node: INode;
-  chart: IChart;
-  setChart: (chart: IChart) => void;
+  setChart: SetChart;
   onClose: () => void;
 }) {
   const settings = React.useContext(SettingsContext);
@@ -78,6 +81,11 @@ function NodeEditor({
 
   // Swap the draft for its catalogue cell, only if the I/O agrees so the
   // node keeps its links.
+  //
+  // Every write below goes through the updater form of `setChart`. The
+  // catalogue call takes as long as it takes, and collaborators keep editing
+  // meanwhile; applying the change to the chart captured at render time would
+  // write back a pre-fetch snapshot and delete whatever landed in between.
   const replaceWithContainerizedCell = async () => {
     setReplacing(true);
     try {
@@ -102,7 +110,9 @@ function NodeEditor({
           message: `The containerized cell "${match.cell.title}" does not match this draft: ${describeIODiff(match.diff).join('; ')}. Update the draft or the cell so they agree.`
         });
       } else {
-        setChart(updateChartNodeCell(chart, node.id, match.cell));
+        setChart(prev =>
+          prev ? updateChartNodeCell(prev, node.id, match.cell) : prev
+        );
         setSnackbar({
           open: true,
           severity: 'success',
@@ -162,12 +172,14 @@ function NodeEditor({
             initialCell={cell}
             onClose={() => setEditOpen(false)}
             onSave={init => {
-              setChart(
-                updateChartNodeCell(
-                  chart,
-                  node.id,
-                  makeDraftCell({ ...init, url: cell.url })
-                )
+              setChart(prev =>
+                prev
+                  ? updateChartNodeCell(
+                      prev,
+                      node.id,
+                      makeDraftCell({ ...init, url: cell.url })
+                    )
+                  : prev
               );
               setEditOpen(false);
             }}
@@ -205,7 +217,7 @@ export function ChartElementEditor({
   config
 }: {
   chart: IChart;
-  setChart: (chart: IChart) => void;
+  setChart: SetChart;
   callbacks: IFlowChartCallbacks;
   config: IConfig;
 }) {
@@ -215,10 +227,7 @@ export function ChartElementEditor({
   }
 
   function onClose() {
-    setChart({
-      ...chart,
-      selected: {}
-    });
+    setChart(prev => (prev ? { ...prev, selected: {} } : prev));
   }
 
   return (
@@ -243,7 +252,6 @@ export function ChartElementEditor({
       {chart.selected.type === 'node' && (
         <NodeEditor
           node={chart.nodes[chart.selected.id as string]}
-          chart={chart}
           setChart={setChart}
           onClose={onClose}
         />

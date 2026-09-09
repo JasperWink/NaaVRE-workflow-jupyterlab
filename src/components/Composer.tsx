@@ -18,6 +18,7 @@ import {
   addCellNodeToChart,
   IChart,
   IChartParam,
+  SetChart,
   validateLink
 } from '../utils/chart';
 import { ISpecialCell } from '../utils/specialCells';
@@ -36,8 +37,12 @@ import { CellPopup } from './cells/CellPopup';
 import { NodeParamValueDialog } from './chart/NodeParamValue';
 
 export interface IProps {
-  /** Local chart changes (drag, link, drop, edit, delete), pushed to the model. */
-  onChartChange?: (chart: IChart) => void;
+  /**
+   * A local change (drag, link, drop, edit, delete) was committed. Carries no
+   * chart on purpose: the host reads it at flush time, because a snapshot taken
+   * here would be stale by the time the debounce settles.
+   */
+  onChartChange?: () => void;
 
   /**
    * The open node changed; the widget puts it on the awareness channel. Not
@@ -129,7 +134,7 @@ export class Composer extends React.Component<IProps, IState> {
     });
   };
 
-  setChart = (nextChart: IChart | ((prev: IChart | null) => IChart | null)) => {
+  setChart: SetChart = nextChart => {
     this.setState(
       prevState => ({
         chart:
@@ -141,10 +146,10 @@ export class Composer extends React.Component<IProps, IState> {
     );
   };
 
-  /** Report the committed chart to the host widget, if it asked to hear. */
+  /** Tell the host widget a change was committed, if it asked to hear. */
   private _notifyChartChange = () => {
     if (this.state.chart) {
-      this.props.onChartChange?.(this.state.chart);
+      this.props.onChartChange?.();
     }
   };
 

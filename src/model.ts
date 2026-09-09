@@ -426,14 +426,21 @@ export class Workflow extends YDocument<WorkflowChange> {
           }
         }
       });
+    // Fresh objects throughout: `defaultChart`'s own `properties`, `selected`
+    // and `hovered` would otherwise be handed to every caller, and the composer
+    // assigns into `properties.params` in place (see `onDeleteKey`).
+    const stored = parseJson(this._content.get(PROPERTIES_KEY), null);
     const chart: IChart = {
       ...defaultChart,
+      offset: { ...defaultChart.offset },
       nodes,
       links,
-      properties: parseJson(
-        this._content.get(PROPERTIES_KEY),
-        defaultChart.properties
-      )
+      properties: {
+        ...stored,
+        params: Array.isArray(stored?.params) ? stored.params : []
+      },
+      selected: {},
+      hovered: {}
     };
     const metadata = parseJson(this._content.get(METADATA_KEY), null);
     if (metadata) {

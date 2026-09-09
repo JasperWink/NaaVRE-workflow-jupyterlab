@@ -17,6 +17,7 @@ The CRDT layout mirrors ``Workflow`` in ``src/model.ts``: a ``pycrdt.Map`` named
 (``link:<id>``), plus the chart-level ``properties`` and ``metadata`` keys.
 """
 
+import copy
 import json
 import sys
 from functools import partial
@@ -89,7 +90,9 @@ class YWorkflow(YBaseDoc):
         """Reassemble the chart from the granular content keys."""
         nodes = {}
         links = {}
-        chart = {**DEFAULT_CHART, "nodes": nodes, "links": links}
+        # Deep copy: a shallow one would hand every room on the server the same
+        # ``selected``/``hovered``/``offset`` dicts.
+        chart = {**copy.deepcopy(DEFAULT_CHART), "nodes": nodes, "links": links}
         # Sorted: ``keys()`` is Y.Map hash order, which is neither insertion
         # order nor stable across a rebuild of the document from the store. The
         # room compares this serialization to the file byte for byte to decide
@@ -107,7 +110,7 @@ class YWorkflow(YBaseDoc):
                     links[key[len(self._LINK_PREFIX):]] = link
             elif key == self._PROPERTIES_KEY:
                 chart[self._PROPERTIES_KEY] = _parse_json(
-                    value, DEFAULT_CHART["properties"]
+                    value, chart[self._PROPERTIES_KEY]
                 )
             elif key == self._METADATA_KEY:
                 metadata = _parse_json(value, None)
@@ -145,8 +148,10 @@ class YWorkflow(YBaseDoc):
         if isinstance(links, dict):
             for link_id, link in links.items():
                 desired[f"{self._LINK_PREFIX}{link_id}"] = _dump_json(link)
+        # ``or``, not ``get(key, default)``: the front-end uses ``??`` here, so
+        # an explicit ``"properties": null`` in the file has to default too.
         desired[self._PROPERTIES_KEY] = _dump_json(
-            chart.get("properties", DEFAULT_CHART["properties"])
+            chart.get("properties") or DEFAULT_CHART["properties"]
         )
         if chart.get("metadata") is not None:
             desired[self._METADATA_KEY] = _dump_json(chart["metadata"])
