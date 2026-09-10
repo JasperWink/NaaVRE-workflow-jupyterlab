@@ -2,8 +2,15 @@ const jestJupyterLab = require('@jupyterlab/testutils/lib/jest-config');
 
 const esModules = [
   '@codemirror',
+  // @jupyter/{react,web}-components and their FAST dependencies ship ESM only;
+  // they arrive through @jupyterlab/ui-components as soon as a test imports
+  // anything from @jupyterlab/docregistry.
+  '@jupyter/react-components',
+  '@jupyter/web-components',
   '@jupyter/ydoc',
   '@jupyterlab/',
+  '@microsoft/fast-',
+  'exenv-es6',
   'lib0',
   'nanoid',
   'vscode-ws-jsonrpc',

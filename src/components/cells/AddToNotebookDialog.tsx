@@ -26,11 +26,7 @@ import {
   VariableType
 } from '../../naavre-common/types/NaaVRECatalogue/WorkflowCells';
 import { requestAPI } from '../../naavre-common/handler';
-import {
-  appendCodeCell,
-  canInsertIntoNotebook,
-  openNotebook
-} from '../../naavre-common/notebook';
+import { appendCodeCell, openNotebook } from '../../naavre-common/notebook';
 
 const DRAFT_CELL_METADATA = { draft_node: true };
 
@@ -58,7 +54,7 @@ interface IContentsItem {
 
 interface IContentsResponse {
   type: string;
-  content: INotebookContent | IContentsItem[];
+  content: IContentsItem[];
 }
 
 // The containerizer recognises R cells by `kernel === 'irkernel'`.
@@ -152,11 +148,19 @@ function generateCellSource(cell: ICell, language: CellLanguage): string {
   return lines.join('\n');
 }
 
+// nbformat requires cell ids to be unique within a notebook, and nothing here
+// checks the target's existing ids — a timestamp alone collides for two cells
+// added in the same millisecond.
+function makeCellId(): string {
+  const rand = Math.random().toString(36).slice(2, 10);
+  return `draft-${Date.now().toString(36)}-${rand}`;
+}
+
 function makeNotebookCell(source: string): INotebookCell {
   return {
     cell_type: 'code',
-    id: `draft-${Date.now().toString(36)}`,
-    metadata: { draft_node: true },
+    id: makeCellId(),
+    metadata: { ...DRAFT_CELL_METADATA },
     source: source
       .split('\n')
       .map((l, i, arr) => (i < arr.length - 1 ? l + '\n' : l)),
@@ -192,12 +196,15 @@ function emptyNotebook(language: CellLanguage): INotebookContent {
   };
 }
 
+function encodePath(path: string): string {
+  return path.split('/').map(encodeURIComponent).join('/');
+}
+
 async function writeNotebook(
   path: string,
   notebook: INotebookContent
 ): Promise<void> {
-  const encodedPath = path.split('/').map(encodeURIComponent).join('/');
-  await requestAPI(`api/contents/${encodedPath}`, {
+  await requestAPI(`api/contents/${encodePath(path)}`, {
     method: 'PUT',
     body: JSON.stringify({
       type: 'notebook',
@@ -207,35 +214,15 @@ async function writeNotebook(
   });
 }
 
-function encodePath(path: string): string {
-  return path.split('/').map(encodeURIComponent).join('/');
-}
-
-// Whether a file already exists at `path`.
+// Whether a file already exists at `path`. `content=0` asks for metadata only,
+// so this does not download the whole notebook.
 async function pathExists(path: string): Promise<boolean> {
   try {
-    await requestAPI(`api/contents/${encodePath(path)}`);
+    await requestAPI(`api/contents/${encodePath(path)}?content=0`);
     return true;
   } catch {
     return false;
   }
-}
-
-// Fallback when the document manager is unavailable: rewrite the notebook file
-// via the Contents API. Changes only show once it is (re)opened.
-async function appendCellViaContentsApi(
-  path: string,
-  cellSource: string
-): Promise<void> {
-  const resp = await requestAPI<IContentsResponse>(
-    `api/contents/${encodePath(path)}`
-  );
-  if (resp.type !== 'notebook') {
-    throw new Error(`"${path}" is not a notebook.`);
-  }
-  const notebook = resp.content as INotebookContent;
-  notebook.cells.push(makeNotebookCell(cellSource));
-  await writeNotebook(path, notebook);
 }
 
 interface ISnackbarState {
@@ -258,8 +245,6 @@ export function AddToNotebookDialog({
   const [selectedPath, setSelectedPath] = useState('');
 
   const [newName, setNewName] = useState('');
-  const [loadingAdd, setLoadingAdd] = useState(false);
-  const [loadingCreate, setLoadingCreate] = useState(false);
 
   const [snackbar, setSnackbar] = useState<ISnackbarState>({
     open: false,
@@ -306,32 +291,23 @@ export function AddToNotebookDialog({
     setSnackbar({ open: true, severity, message });
   };
 
+  // Both handlers close the dialog before awaiting and report through the
+  // snackbar, so there is no in-dialog progress state to keep.
   const handleAdd = async () => {
     if (!selectedPath) {
       return;
     }
-    setLoadingAdd(true);
-    onClose(); // close dialog immediately
+    onClose();
     try {
-      if (canInsertIntoNotebook()) {
-        // Insert into the live notebook so the cell appears immediately,
-        // whether or not the notebook is already open.
-        await appendCodeCell(selectedPath, cellSource, DRAFT_CELL_METADATA);
-        showResult('success', `Cell added to ${selectedPath}.`);
-      } else {
-        await appendCellViaContentsApi(selectedPath, cellSource);
-        showResult(
-          'success',
-          `Cell added to ${selectedPath}. Reopen the notebook to see it.`
-        );
-      }
+      // Into the live notebook, so the cell appears immediately whether or not
+      // the notebook is already open.
+      await appendCodeCell(selectedPath, cellSource, DRAFT_CELL_METADATA);
+      showResult('success', `Cell added to ${selectedPath}.`);
     } catch (e: unknown) {
       showResult(
         'error',
         `Failed to add cell: ${e instanceof Error ? e.message : String(e)}`
       );
-    } finally {
-      setLoadingAdd(false);
     }
   };
 
@@ -341,8 +317,7 @@ export function AddToNotebookDialog({
       return;
     }
     const path = `${name}.ipynb`;
-    setLoadingCreate(true);
-    onClose(); // close dialog immediately
+    onClose();
     try {
       // Guard against silently overwriting an existing notebook.
       if (await pathExists(path)) {
@@ -356,24 +331,15 @@ export function AddToNotebookDialog({
         ...emptyNotebook(language),
         cells: [makeNotebookCell(cellSource)]
       });
-      if (canInsertIntoNotebook()) {
-        openNotebook(path);
-      }
+      openNotebook(path);
       showResult('success', `Created ${path} with the cell.`);
-      setNewName('');
-      // Refresh the list so the new notebook appears in the dropdown.
-      fetchNotebooks();
     } catch (e: unknown) {
       showResult(
         'error',
         `Failed to create notebook: ${e instanceof Error ? e.message : String(e)}`
       );
-    } finally {
-      setLoadingCreate(false);
     }
   };
-
-  const loading = loadingAdd || loadingCreate;
 
   return (
     <>
@@ -410,7 +376,7 @@ export function AddToNotebookDialog({
                 label="Notebook"
                 value={selectedPath}
                 onChange={e => setSelectedPath(e.target.value)}
-                disabled={loadingList || loading}
+                disabled={loadingList}
               >
                 {notebooks.length === 0 && (
                   <MenuItem disabled value="">
@@ -426,7 +392,7 @@ export function AddToNotebookDialog({
             </FormControl>
             <IconButton
               onClick={fetchNotebooks}
-              disabled={loadingList || loading}
+              disabled={loadingList}
               aria-label="Refresh notebook list"
             >
               {loadingList ? <CircularProgress size={20} /> : <RefreshIcon />}
@@ -436,8 +402,7 @@ export function AddToNotebookDialog({
           <Button
             variant="contained"
             onClick={handleAdd}
-            disabled={!selectedPath || loading}
-            startIcon={loadingAdd ? <CircularProgress size={16} /> : undefined}
+            disabled={!selectedPath}
             sx={{ mt: 1 }}
             fullWidth
           >
@@ -460,15 +425,11 @@ export function AddToNotebookDialog({
               value={newName}
               onChange={e => setNewName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleCreate()}
-              disabled={loading}
             />
             <Button
               variant="outlined"
               onClick={handleCreate}
-              disabled={!newName.trim() || loading}
-              startIcon={
-                loadingCreate ? <CircularProgress size={16} /> : undefined
-              }
+              disabled={!newName.trim()}
               sx={{ mt: '2px', whiteSpace: 'nowrap', flexShrink: 0 }}
             >
               Create & add

@@ -1,4 +1,9 @@
-import { DRAFT_CELL_TYPE, makeDraftCell } from './specialCells';
+import {
+  DRAFT_CELL_TYPE,
+  isSpecialNodeType,
+  makeDraftCell,
+  specialCells
+} from './specialCells';
 import {
   addCellNodeToChart,
   cellToChartNode,
@@ -56,6 +61,34 @@ describe('addCellNodeToChart', () => {
     expect(chart.selected).toEqual({ type: 'node', id: cell.url });
     // does not mutate the shared default chart
     expect(Object.keys(defaultChart.nodes)).toHaveLength(0);
+  });
+
+  test('gives a second node a free id when the url is already taken', () => {
+    // The special cells have fixed urls, so adding two splitters used to key
+    // both on 'splitter' and silently drop the first.
+    const splitter = specialCells.find(c => c.url === 'splitter')!;
+    const chart = addCellNodeToChart(
+      addCellNodeToChart(defaultChart, splitter),
+      splitter
+    );
+
+    expect(Object.keys(chart.nodes).sort()).toEqual(['splitter', 'splitter-2']);
+    expect(chart.selected).toEqual({ type: 'node', id: 'splitter-2' });
+    // The cell itself is unchanged; only the node id is made unique.
+    expect(chart.nodes['splitter-2'].properties.cell.url).toBe('splitter');
+  });
+
+  test('keeps looking until it finds a free id', () => {
+    const splitter = specialCells.find(c => c.url === 'splitter')!;
+    let chart = defaultChart;
+    for (let i = 0; i < 3; i++) {
+      chart = addCellNodeToChart(chart, splitter);
+    }
+    expect(Object.keys(chart.nodes).sort()).toEqual([
+      'splitter',
+      'splitter-2',
+      'splitter-3'
+    ]);
   });
 });
 
@@ -115,5 +148,21 @@ describe('updateChartNodeCell', () => {
     expect(chart.nodes[cell.url].id).toBe(cell.url);
     expect(chart.nodes[cell.url].position).toEqual(pos);
     expect(chart.nodes[cell.url].properties.cell.title).toBe('A2');
+  });
+});
+
+describe('isSpecialNodeType', () => {
+  test('is true only for the fixed-size nodes', () => {
+    expect(isSpecialNodeType('splitter')).toBe(true);
+    expect(isSpecialNodeType('merger')).toBe(true);
+  });
+
+  test('is false for anything carrying user-defined I/O', () => {
+    expect(isSpecialNodeType('workflow-cell')).toBe(false);
+    expect(isSpecialNodeType(DRAFT_CELL_TYPE)).toBe(false);
+  });
+
+  test('treats a missing type as special, matching the old !== check', () => {
+    expect(isSpecialNodeType(undefined)).toBe(true);
   });
 });

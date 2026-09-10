@@ -18,6 +18,7 @@ import {
   addCellNodeToChart,
   IChart,
   IChartParam,
+  SetChart,
   validateLink
 } from '../utils/chart';
 import { ISpecialCell } from '../utils/specialCells';
@@ -36,8 +37,12 @@ import { CellPopup } from './cells/CellPopup';
 import { NodeParamValueDialog } from './chart/NodeParamValue';
 
 export interface IProps {
-  /** Local chart changes (drag, link, drop, edit, delete), pushed to the model. */
-  onChartChange?: (chart: IChart) => void;
+  /**
+   * A local change (drag, link, drop, edit, delete) was committed. Carries no
+   * chart on purpose: the host reads it at flush time, because a snapshot taken
+   * here would be stale by the time the debounce settles.
+   */
+  onChartChange?: () => void;
 
   /**
    * The open node changed; the widget puts it on the awareness channel. Not
@@ -54,6 +59,8 @@ export interface IState {
   runWorkflowDialogOpen: boolean;
   /** Remote collaborators by node id, pushed in by the host widget. */
   nodePresence: INodePresence;
+  /** The node editor has a dialog open or a replace in flight. */
+  nodeEditorBusy: boolean;
 }
 
 export const DefaultState: IState = {
@@ -62,7 +69,8 @@ export const DefaultState: IState = {
   selectedCellNode: null,
   selectedChartParam: null,
   runWorkflowDialogOpen: false,
-  nodePresence: {}
+  nodePresence: {},
+  nodeEditorBusy: false
 };
 
 export class Composer extends React.Component<IProps, IState> {
@@ -129,7 +137,7 @@ export class Composer extends React.Component<IProps, IState> {
     });
   };
 
-  setChart = (nextChart: IChart | ((prev: IChart | null) => IChart | null)) => {
+  setChart: SetChart = nextChart => {
     this.setState(
       prevState => ({
         chart:
@@ -141,10 +149,10 @@ export class Composer extends React.Component<IProps, IState> {
     );
   };
 
-  /** Report the committed chart to the host widget, if it asked to hear. */
+  /** Tell the host widget a change was committed, if it asked to hear. */
   private _notifyChartChange = () => {
     if (this.state.chart) {
-      this.props.onChartChange?.(this.state.chart);
+      this.props.onChartChange?.();
     }
   };
 
@@ -169,6 +177,11 @@ export class Composer extends React.Component<IProps, IState> {
     this.setState({ nodePresence: nodePresence });
   };
 
+  /** Reported by the node editor; its dialogs are its own local state. */
+  setNodeEditorBusy = (busy: boolean) => {
+    this.setState({ nodeEditorBusy: busy });
+  };
+
   /**
    * The node this user has open. A drag or an open dialog counts as editing and
    * beats plain selection, being where a concurrent edit actually costs work.
@@ -186,7 +199,11 @@ export class Composer extends React.Component<IProps, IState> {
     const selected = this.state.chart?.selected;
     const nodeId =
       selected?.type === 'node' && selected.id ? selected.id : null;
-    return { nodeId: nodeId, editing: false };
+    // The node editor only ever edits the selected node.
+    return {
+      nodeId: nodeId,
+      editing: nodeId !== null && this.state.nodeEditorBusy
+    };
   };
 
   exportWorkflow = async (browserFactory: IFileBrowserFactory) => {
@@ -292,6 +309,7 @@ export class Composer extends React.Component<IProps, IState> {
                   setChart={this.setChart}
                   callbacks={this.chartStateActions}
                   config={this.chartConfig}
+                  onEditingChange={this.setNodeEditorBusy}
                 />
               )}
               <NodeParamValueDialog

@@ -2,6 +2,8 @@ import React, { CSSProperties, ReactNode } from 'react';
 import Tooltip from '@mui/material/Tooltip';
 import { IPortDefaultProps } from '@mrblenny/react-flow-chart';
 
+import { isSpecialNodeType } from '../../utils/specialCells';
+
 function PortDefaultOuter({ children }: { children: ReactNode }) {
   return (
     <div
@@ -53,9 +55,7 @@ function PortLabel({ children }: { children: ReactNode }) {
 }
 
 export const PortCustom = (props: IPortDefaultProps) => {
-  const isSpecialNode =
-    props.port.properties.parentNodeType !== 'workflow-cell' &&
-    props.port.properties.parentNodeType !== 'draft-cell';
+  const isSpecialNode = isSpecialNodeType(props.port.properties.parentNodeType);
 
   const positionStyle = props.port.type === 'left' ? { left: 0 } : { right: 0 };
 

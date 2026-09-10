@@ -91,6 +91,8 @@
         "@jupyterlab/theme-light-extension": "^4.4.10",
         "@storybook/addon-webpack5-compiler-swc": "^4.0.1",
         "@storybook/react-webpack5": "^9.1.7",
+        "@testing-library/dom": "^10.4.1",
+        "@testing-library/react": "^16.3.3",
         "@types/jest": "^29.2.0",
         "@types/json-schema": "^7.0.11",
         "@types/react": "^18.0.26",

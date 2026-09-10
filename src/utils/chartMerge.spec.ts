@@ -5,12 +5,16 @@ import * as Y from 'yjs';
 
 import { Workflow } from '../model';
 import {
+  addCellNodeToChart,
   ChartContent,
   defaultChart,
   IChart,
+  IChartParam,
   INode,
-  mergeChartChanges
+  mergeChartChanges,
+  mergeChartParams
 } from './chart';
+import { makeDraftCell } from './specialCells';
 
 function node(id: string, x = 10): INode {
   return {
@@ -75,6 +79,88 @@ describe('mergeChartChanges', () => {
   it('is a no-op when nothing changed anywhere', () => {
     const base = content([node('n1'), node('n2')]);
     expect(mergeChartChanges(base, base, base)).toEqual(base);
+  });
+});
+
+describe('a node created in this session', () => {
+  // `makeDraftCell` leaves several catalogue fields `undefined`, and those keys
+  // do not survive the document's JSON round trip. Unless the node is
+  // normalized where it is built, the difference reads as a local edit that no
+  // write can settle: the client re-asserts the node forever, and undoes a
+  // collaborator's deletion of it.
+
+  it('is stored exactly as the composer holds it', () => {
+    const chartWithDraft = addCellNodeToChart(
+      defaultChart,
+      makeDraftCell({ title: 'Step A' })
+    );
+    const wf = new Workflow();
+    wf.setChart(chartWithDraft);
+    expect(wf.getChart().nodes).toEqual(chartWithDraft.nodes);
+  });
+
+  it('follows a collaborator deleting it, rather than coming back', () => {
+    const chartWithDraft = addCellNodeToChart(
+      defaultChart,
+      makeDraftCell({ title: 'Step A' })
+    );
+    const local: ChartContent = { nodes: chartWithDraft.nodes, links: {} };
+    // What the client took from the document: the same node, JSON round-tripped.
+    const base: ChartContent = JSON.parse(JSON.stringify(local));
+
+    const merged = mergeChartChanges(base, local, { nodes: {}, links: {} });
+
+    expect(merged.nodes).toEqual({});
+  });
+});
+
+describe('mergeChartParams', () => {
+  const param = (
+    node_id: string,
+    name: string,
+    value: string
+  ): IChartParam => ({
+    node_id,
+    name,
+    value
+  });
+
+  it('keeps params two clients filled in at the same time', () => {
+    const base = [param('n1', 'threshold', '1')];
+    const local = [param('n1', 'threshold', '1'), param('n1', 'window', '5')];
+    const remote = [param('n1', 'threshold', '1'), param('n2', 'seed', '7')];
+
+    expect(mergeChartParams(base, local, remote)).toEqual([
+      param('n1', 'threshold', '1'),
+      param('n1', 'window', '5'),
+      param('n2', 'seed', '7')
+    ]);
+  });
+
+  it('keeps a local edit to one param and a remote edit to another', () => {
+    const base = [param('n1', 'a', '1'), param('n1', 'b', '2')];
+    const local = [param('n1', 'a', '99'), param('n1', 'b', '2')];
+    const remote = [param('n1', 'a', '1'), param('n1', 'b', '88')];
+
+    expect(mergeChartParams(base, local, remote)).toEqual([
+      param('n1', 'a', '99'),
+      param('n1', 'b', '88')
+    ]);
+  });
+
+  it('applies a param the local user cleared', () => {
+    const base = [param('n1', 'a', '1'), param('n1', 'b', '2')];
+    expect(mergeChartParams(base, [param('n1', 'a', '1')], base)).toEqual([
+      param('n1', 'a', '1')
+    ]);
+  });
+
+  it('orders the result, so an unchanged merge rewrites nothing', () => {
+    const base = [param('n2', 'b', '2'), param('n1', 'a', '1')];
+    expect(mergeChartParams(base, base, base)).toEqual([
+      param('n1', 'a', '1'),
+      param('n2', 'b', '2')
+    ]);
   });
 });
 

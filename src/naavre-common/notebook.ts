@@ -5,13 +5,8 @@ import { NotebookPanel } from '@jupyterlab/notebook';
 // live shared model makes added cells appear without a reopen.
 let _docManager: IDocumentManager | null = null;
 
-export function setDocumentManager(docManager: IDocumentManager | null): void {
+export function setDocumentManager(docManager: IDocumentManager): void {
   _docManager = docManager;
-}
-
-// Whether live insertion is available; if not, fall back to the Contents API.
-export function canInsertIntoNotebook(): boolean {
-  return _docManager !== null;
 }
 
 // Open a notebook in the background (without stealing focus from the composer),
