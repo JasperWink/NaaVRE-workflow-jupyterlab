@@ -112,34 +112,28 @@ export function CellsSideBar({
             setSelectedCell={setSelectedCell}
             fetchCellsListResponse={fetchCellsListResponse}
           />
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              minHeight: '40px',
-              paddingRight: '10px',
-              paddingLeft: '10px',
-              background: '#3c8f49',
-              color: 'white',
-              fontSize: 'medium'
-            }}
-          >
-            <span>Draft Components</span>
-            <Tooltip title="New draft node" arrow>
-              <IconButton
-                aria-label="New draft node"
-                style={{ color: 'white', borderRadius: '100%' }}
-                onClick={() => setDraftDialogOpen(true)}
-              >
-                <AddIcon />
-              </IconButton>
-            </Tooltip>
-          </div>
-          <p style={{ margin: '10px', fontSize: 'small', color: 'gray' }}>
-            Create a placeholder node with custom inputs and outputs before the
-            containerized cell exists.
-          </p>
+          {/* Drafts live in the chart, not the catalogue, so this section has
+              no cells of its own - only the header and its create button. */}
+          <CellsList
+            title="Draft Components"
+            cells={[]}
+            loading={false}
+            message="Create a placeholder node with custom inputs and outputs before the containerized cell exists."
+            selectedCellInList={selectedCellInList}
+            setSelectedCell={setSelectedCell}
+            fetchCellsListResponse={fetchCellsListResponse}
+            button={
+              <Tooltip title="New draft node" arrow>
+                <IconButton
+                  aria-label="New draft node"
+                  style={{ color: 'white', borderRadius: '100%' }}
+                  onClick={() => setDraftDialogOpen(true)}
+                >
+                  <AddIcon />
+                </IconButton>
+              </Tooltip>
+            }
+          />
           <DraftCellDialog
             open={draftDialogOpen}
             onClose={() => setDraftDialogOpen(false)}

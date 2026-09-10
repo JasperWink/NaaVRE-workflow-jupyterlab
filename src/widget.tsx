@@ -201,6 +201,40 @@ export class ExperimentManagerWidget extends ReactWidget {
   }
 
   /**
+   * Replay this client's changes on top of `remote`. Params get the same
+   * three-way treatment as nodes and links rather than a whole-array write,
+   * which would drop a collaborator's concurrent param edit.
+   */
+  private _mergeAgainst(
+    local: IChart | null,
+    remote: IChart
+  ): { content: ChartContent; params: Array<IChartParam> } {
+    const localParams = local?.properties?.params;
+    return {
+      content: local
+        ? mergeChartChanges(this._base, local, remote)
+        : { nodes: remote.nodes, links: remote.links },
+      params:
+        localParams === undefined
+          ? remote.properties.params
+          : mergeChartParams(
+              this._baseParams,
+              localParams,
+              remote.properties.params
+            )
+    };
+  }
+
+  /** What this client last took from the document, for the next merge. */
+  private _setBase(content: ChartContent, params: Array<IChartParam>): void {
+    this._base = lodash.cloneDeep({
+      nodes: content.nodes,
+      links: content.links
+    });
+    this._baseParams = lodash.cloneDeep(params);
+  }
+
+  /**
    * Write this client's *changes* into the shared model. `chart` is a snapshot,
    * so diffing against `_base` keeps a collaborator's concurrent additions.
    */
@@ -209,37 +243,27 @@ export class ExperimentManagerWidget extends ReactWidget {
       return;
     }
     const current = this._model.chart;
-    const merged = mergeChartChanges(this._base, chart, current);
-    // Params get the same treatment as nodes and links rather than a whole
-    // array write, which would drop a collaborator's concurrent param edit.
-    const localParams = chart.properties?.params;
-    const params =
-      localParams === undefined
-        ? current.properties.params
-        : mergeChartParams(
-            this._baseParams,
-            localParams,
-            current.properties.params
-          );
+    const { content, params } = this._mergeAgainst(chart, current);
     if (
-      !lodash.isEqual(current.nodes, merged.nodes) ||
-      !lodash.isEqual(current.links, merged.links) ||
+      !lodash.isEqual(current.nodes, content.nodes) ||
+      !lodash.isEqual(current.links, content.links) ||
       !lodash.isEqual(current.properties.params, params)
     ) {
       this._writing = true;
       try {
         this._model.chart = {
           ...current,
-          nodes: merged.nodes,
-          links: merged.links,
+          nodes: content.nodes,
+          links: content.links,
           properties: { ...current.properties, params }
         };
       } finally {
         this._writing = false;
       }
     }
-    this._base = lodash.cloneDeep(merged);
-    this._baseParams = lodash.cloneDeep(params);
+    // Base becomes what was written, not what arrived - the opposite of
+    // `_onContentChanged`. Do not unify the two.
+    this._setBase(content, params);
   }
 
   /**
@@ -318,23 +342,9 @@ export class ExperimentManagerWidget extends ReactWidget {
     // by the same rule the flush uses. Taking the snapshot wholesale would drop
     // whatever the user did since the last flush - up to a whole drag, since
     // the debounce only settles once the drag stops.
-    const content = local
-      ? mergeChartChanges(this._base, local, shared)
-      : { nodes: shared.nodes, links: shared.links };
-    const localParams = local?.properties?.params;
-    const params =
-      localParams === undefined
-        ? shared.properties.params
-        : mergeChartParams(
-            this._baseParams,
-            localParams,
-            shared.properties.params
-          );
-    this._base = lodash.cloneDeep({
-      nodes: shared.nodes,
-      links: shared.links
-    });
-    this._baseParams = lodash.cloneDeep(shared.properties.params);
+    const { content, params } = this._mergeAgainst(local, shared);
+    // Base becomes what arrived, not the replay - the opposite of the flush.
+    this._setBase(shared, shared.properties.params);
     this.composerRef.current?.setState({
       chart: {
         nodes: content.nodes,

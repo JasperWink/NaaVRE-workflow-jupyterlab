@@ -13,6 +13,29 @@ import { INode } from '../../utils/chart';
 import { ICollaborator, readableTextColor } from '../../utils/presence';
 import { NodePresenceContext } from './NodePresenceContext';
 
+const DROP_SHADOW = 'rgba(0, 0, 0, 0.1) 0 7px 10px 0';
+
+/** The node outline: a collaborator's colour wins, then the draft dashes. */
+function nodeBorder(presenceColor?: string, isDraft?: boolean): string {
+  if (presenceColor) {
+    return `1px solid ${presenceColor}`;
+  }
+  return isDraft ? '1px dashed darkgray' : '1px solid lightgray';
+}
+
+/**
+ * A collaborator's ring on three edges, leaving `openEdge` — the one shared
+ * with the other half of the node — to be drawn there. Inset, because the title
+ * bar sits outside this box: an outline would ring only the body, and either an
+ * outline or a thicker border would shift the layout.
+ */
+function presenceRing(color: string, openEdge: 'top' | 'bottom'): string {
+  const closed = openEdge === 'top' ? '0 -2px' : '0 2px';
+  return `inset ${closed} 0 0 ${color},
+     inset 2px 0 0 0 ${color},
+     inset -2px 0 0 0 ${color}`;
+}
+
 const NodeContainer = styled.div<{
   width?: string;
   height?: string;
@@ -26,25 +49,12 @@ const NodeContainer = styled.div<{
   min-height: 60px;
   border-bottom-left-radius: 5px;
   border-bottom-right-radius: 5px;
-  border: ${props =>
-    props.presenceColor
-      ? `1px solid ${props.presenceColor}`
-      : props.isDraft
-        ? '1px dashed darkgray'
-        : '1px solid lightgray'};
+  border: ${props => nodeBorder(props.presenceColor, props.isDraft)};
   border-top-width: 0;
-  /* The title bar is positioned above this box, so an outline here would ring
-     only the body. The two elements' borders already trace the combined
-     silhouette, so the collaborator's colour is drawn as an inset ring on the
-     three outer edges of each — no seam where they meet, and no layout shift,
-     which an outline or a thicker border would both cause. */
   box-shadow: ${props =>
     props.presenceColor
-      ? `inset 0 -2px 0 0 ${props.presenceColor},
-         inset 2px 0 0 0 ${props.presenceColor},
-         inset -2px 0 0 0 ${props.presenceColor},
-         rgba(0, 0, 0, 0.1) 0 7px 10px 0`
-      : 'rgba(0, 0, 0, 0.1) 0 7px 10px 0'};
+      ? `${presenceRing(props.presenceColor, 'top')}, ${DROP_SHADOW}`
+      : DROP_SHADOW};
 `;
 
 /**
@@ -116,18 +126,10 @@ function NodeTitle({
         width: '100%',
         borderTopLeftRadius: '5px',
         borderTopRightRadius: '5px',
-        border: presenceColor
-          ? `1px solid ${presenceColor}`
-          : cell.is_draft
-            ? '1px dashed darkgray'
-            : '1px solid lightgray',
+        border: nodeBorder(presenceColor, cell.is_draft),
         borderBottomWidth: 0,
-        // Top, left and right only: the bottom edge is shared with the node
-        // body, which draws the other three. Together they ring the whole node.
         boxShadow: presenceColor
-          ? `inset 0 2px 0 0 ${presenceColor},
-             inset 2px 0 0 0 ${presenceColor},
-             inset -2px 0 0 0 ${presenceColor}`
+          ? presenceRing(presenceColor, 'bottom')
           : undefined,
         backgroundColor: backgroundColor,
         display: 'flex',

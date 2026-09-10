@@ -69,39 +69,22 @@ export function diffCellIO(draft: ICell, cell: ICell): IIODiff {
   return { missingInputs, extraInputs, missingOutputs, extraOutputs };
 }
 
-export function ioMatches(diff: IIODiff): boolean {
-  return (
-    diff.missingInputs.length === 0 &&
-    diff.extraInputs.length === 0 &&
-    diff.missingOutputs.length === 0 &&
-    diff.extraOutputs.length === 0
-  );
-}
+const DIFF_LABELS: Array<[keyof IIODiff, string]> = [
+  ['missingInputs', 'inputs missing on the containerized cell'],
+  ['extraInputs', 'extra inputs on the containerized cell'],
+  ['missingOutputs', 'outputs missing on the containerized cell'],
+  ['extraOutputs', 'extra outputs on the containerized cell']
+];
 
 /** Human-readable lines describing an I/O mismatch, for the user's error. */
 export function describeIODiff(diff: IIODiff): string[] {
-  const lines: string[] = [];
-  if (diff.missingInputs.length > 0) {
-    lines.push(
-      `inputs missing on the containerized cell: ${diff.missingInputs.join(', ')}`
-    );
-  }
-  if (diff.extraInputs.length > 0) {
-    lines.push(
-      `extra inputs on the containerized cell: ${diff.extraInputs.join(', ')}`
-    );
-  }
-  if (diff.missingOutputs.length > 0) {
-    lines.push(
-      `outputs missing on the containerized cell: ${diff.missingOutputs.join(', ')}`
-    );
-  }
-  if (diff.extraOutputs.length > 0) {
-    lines.push(
-      `extra outputs on the containerized cell: ${diff.extraOutputs.join(', ')}`
-    );
-  }
-  return lines;
+  return DIFF_LABELS.filter(([key]) => diff[key].length > 0).map(
+    ([key, label]) => `${label}: ${diff[key].join(', ')}`
+  );
+}
+
+export function ioMatches(diff: IIODiff): boolean {
+  return describeIODiff(diff).length === 0;
 }
 
 export type PromotionMatch =

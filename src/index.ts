@@ -51,9 +51,10 @@ const extension: JupyterFrontEndPlugin<void> = {
     ITranslator,
     IToolbarWidgetRegistry,
     ISettingRegistry,
-    IFileBrowserFactory
+    IFileBrowserFactory,
+    IDocumentManager
   ],
-  optional: [IDocumentManager, ICollaborativeContentProvider],
+  optional: [ICollaborativeContentProvider],
   provides: IWorkflowTracker,
   activate: (
     app: JupyterFrontEnd,
@@ -63,7 +64,7 @@ const extension: JupyterFrontEndPlugin<void> = {
     toolbarRegistry: IToolbarWidgetRegistry | null,
     settingRegistry: ISettingRegistry | null,
     browserFactory: IFileBrowserFactory,
-    docManager: IDocumentManager | null,
+    docManager: IDocumentManager,
     contentProvider: ICollaborativeContentProvider | null
   ) => {
     console.log(
