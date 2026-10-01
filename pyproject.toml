@@ -38,7 +38,7 @@ collaboration = [
     "jupyter-collaboration>=4.4.2,<4.5",
     "jupyter-collaboration-ui>=2.4.2,<2.5",
     "jupyter-docprovider>=2.4.2,<2.5",
-    "jupyterlab>=4.5,<4.6",
+    "jupyterlab>=4.5,<4.7",
 ]
 
 # The name MUST equal the file type ('naavrewfdoc', src/index.ts):
