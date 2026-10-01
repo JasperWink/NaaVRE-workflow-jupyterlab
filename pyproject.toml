@@ -37,7 +37,7 @@ dynamic = ["version", "description", "authors", "urls", "keywords"]
 collaboration = [
     "jupyter-collaboration>=4.4.2,<4.5",
     "jupyter-collaboration-ui>=2.4.2,<2.5",
-    "jupyter-docprovider>=2.4.2,<2.5",
+    "jupyter-docprovider>=2.4.2,<3.1",
     "jupyterlab>=4.5,<4.6",
 ]
 
