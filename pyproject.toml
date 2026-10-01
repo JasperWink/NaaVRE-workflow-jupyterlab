@@ -35,7 +35,7 @@ dynamic = ["version", "description", "authors", "urls", "keywords"]
 # line does not accept; moving up means the jupyter-collaboration 5.0 line.
 [project.optional-dependencies]
 collaboration = [
-    "jupyter-collaboration>=4.4.2,<4.5",
+    "jupyter-collaboration>=4.4.2,<5.1",
     "jupyter-collaboration-ui>=2.4.2,<2.5",
     "jupyter-docprovider>=2.4.2,<2.5",
     "jupyterlab>=4.5,<4.6",
